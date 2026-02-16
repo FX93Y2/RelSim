@@ -82,6 +82,18 @@ contextBridge.exposeInMainWorld(
     ipcRenderer.on('app-close-requested', callback);
     // Return cleanup function
     return () => ipcRenderer.removeListener('app-close-requested', callback);
+  },
+
+  // Auto-Updater
+  checkForUpdate: () => ipcRenderer.invoke('updater:check'),
+  openReleasePage: () => ipcRenderer.invoke('updater:open-release-page'),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('updater:update-available', (_event, info) => callback(info));
+    return () => ipcRenderer.removeListener('updater:update-available', callback);
+  },
+  onUpdateError: (callback) => {
+    ipcRenderer.on('updater:error', (_event, error) => callback(error));
+    return () => ipcRenderer.removeListener('updater:error', callback);
   }
 }
 ); 

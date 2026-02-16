@@ -7,6 +7,7 @@ import Header from './components/layout/Header';
 import ProjectSidebar from './components/layout/Sidebar';
 import NavigationSidebar from './components/layout/NavigationSidebar';
 import GuideOverlay from './components/shared/GuideOverlay';
+import UpdateNotification from './components/shared/UpdateNotification';
 
 // Pages
 import ConfigurationGuide from './components/pages/ConfigurationGuide';
@@ -32,10 +33,10 @@ const App = () => {
     // Remove any conflicting theme classes
     document.body.classList.remove('theme-light', 'theme-dark');
     document.body.classList.add(`theme-${theme}`);
-    
+
     // Keep body overflow hidden for app-like behavior
     document.body.style.overflow = 'hidden';
-    
+
     // Save theme preference to localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);
@@ -45,13 +46,13 @@ const App = () => {
     const timer = setTimeout(() => {
       // Signal that React app is fully rendered
       document.body.classList.add('react-ready');
-      
+
       // Use the global function to hide loading screen
       if (window.hideLoadingScreen) {
         window.hideLoadingScreen();
       }
     }, 500); // Small delay to ensure content is rendered
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -79,7 +80,7 @@ const App = () => {
     const savedMode = localStorage.getItem('sidebarMode');
     return savedMode || 'database'; // 'database', 'navigation', or 'none'
   });
-  
+
   const [sidebarVisible, setSidebarVisible] = useState(() => {
     const savedVisibility = localStorage.getItem('sidebarVisible');
     return savedVisibility !== null ? savedVisibility === 'true' : true;
@@ -148,76 +149,79 @@ const App = () => {
     <ToastProvider>
       <DndProvider theme={theme}>
         <div className={`app-grid-container ${!sidebarVisible ? 'sidebar-collapsed' : ''}`}>
-        {/* Header Panel */}
-        <div className="grid-header">
-          <Header 
-            currentTheme={theme} 
-            onToggleTheme={toggleTheme} 
-            sidebarVisible={sidebarVisible}
-            sidebarMode={sidebarMode}
-            onToggleSidebar={toggleDatabaseExplorer}
-            onToggleNavigationSidebar={toggleNavigationSidebar}
-          />
-        </div>
-        
-        {/* Sidebar Panel */}
-        <div className="grid-sidebar">
-          {sidebarMode === 'database' ? (
-            <ProjectSidebar theme={theme} visible={sidebarVisible} />
-          ) : (
-            <NavigationSidebar 
-              theme={theme} 
-              visible={sidebarVisible} 
-              onSectionSelect={handleGuideSectionSelect}
-              activeSection={activeGuideSection}
+          {/* Header Panel */}
+          <div className="grid-header">
+            <Header
+              currentTheme={theme}
+              onToggleTheme={toggleTheme}
+              sidebarVisible={sidebarVisible}
+              sidebarMode={sidebarMode}
+              onToggleSidebar={toggleDatabaseExplorer}
+              onToggleNavigationSidebar={toggleNavigationSidebar}
+            />
+          </div>
+
+          {/* Sidebar Panel */}
+          <div className="grid-sidebar">
+            {sidebarMode === 'database' ? (
+              <ProjectSidebar theme={theme} visible={sidebarVisible} />
+            ) : (
+              <NavigationSidebar
+                theme={theme}
+                visible={sidebarVisible}
+                onSectionSelect={handleGuideSectionSelect}
+                activeSection={activeGuideSection}
+              />
+            )}
+          </div>
+
+          {/* Sidebar Resize Handle */}
+          {sidebarVisible && (
+            <div
+              className="grid-sidebar-handle"
+              onMouseDown={handleSidebarResize}
+              title="Drag to resize sidebar"
             />
           )}
-        </div>
-        
-        {/* Sidebar Resize Handle */}
-        {sidebarVisible && (
-          <div 
-            className="grid-sidebar-handle"
-            onMouseDown={handleSidebarResize}
-            title="Drag to resize sidebar"
-          />
-        )}
-        
-        {/* Content Panel */}
-        <div className="grid-content">
-          <div className="content-area">
-            <Container fluid className="p-0 h-100">
-              <Routes>
-              {/* Welcome and dashboard */}
-              <Route path="/" element={<ConfigurationGuide />} />
-              
-              {/* Project routes */}
-              <Route path="/project/:projectId" element={<ProjectPage theme={theme} />} />
-              <Route path="/project/:projectId/:activeTab" element={<ProjectPage theme={theme} />} />
-              <Route path="/project/:projectId/results/:resultId" element={<ProjectPage theme={theme} />} />
-              
-              {/* Standalone configuration routes */}
-              <Route path="/db-config" element={<DbConfigEditor theme={theme} />} />
-              <Route path="/db-config/:configId" element={<DbConfigEditor theme={theme} />} />
-              <Route path="/sim-config" element={<SimConfigEditor theme={theme} />} />
-              <Route path="/sim-config/:configId" element={<SimConfigEditor theme={theme} />} />
-              
-              {/* Results routes */}
-              <Route path="/results/:databasePath" element={<ResultsViewer />} />
-              
-              {/* Default catch-all route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Container>
-          </div>
-        </div>
 
-        {/* Guide Overlay */}
-        <GuideOverlay 
-          visible={guideOverlayVisible}
-          activeSection={activeGuideSection}
-          onClose={closeGuideOverlay}
-        />
+          {/* Content Panel */}
+          <div className="grid-content">
+            <div className="content-area">
+              <Container fluid className="p-0 h-100">
+                <Routes>
+                  {/* Welcome and dashboard */}
+                  <Route path="/" element={<ConfigurationGuide />} />
+
+                  {/* Project routes */}
+                  <Route path="/project/:projectId" element={<ProjectPage theme={theme} />} />
+                  <Route path="/project/:projectId/:activeTab" element={<ProjectPage theme={theme} />} />
+                  <Route path="/project/:projectId/results/:resultId" element={<ProjectPage theme={theme} />} />
+
+                  {/* Standalone configuration routes */}
+                  <Route path="/db-config" element={<DbConfigEditor theme={theme} />} />
+                  <Route path="/db-config/:configId" element={<DbConfigEditor theme={theme} />} />
+                  <Route path="/sim-config" element={<SimConfigEditor theme={theme} />} />
+                  <Route path="/sim-config/:configId" element={<SimConfigEditor theme={theme} />} />
+
+                  {/* Results routes */}
+                  <Route path="/results/:databasePath" element={<ResultsViewer />} />
+
+                  {/* Default catch-all route */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Container>
+            </div>
+          </div>
+
+          {/* Guide Overlay */}
+          <GuideOverlay
+            visible={guideOverlayVisible}
+            activeSection={activeGuideSection}
+            onClose={closeGuideOverlay}
+          />
+
+          {/* Update Notification */}
+          <UpdateNotification />
         </div>
       </DndProvider>
     </ToastProvider>

@@ -10,6 +10,7 @@
     "dev-admin": "powershell -Command \"Start-Process cmd -ArgumentList '/c npm run dev' -Verb RunAs\"",
     "prebuild": "node build-scripts/package-python.js",
     "build": "cross-env NODE_ENV=production webpack && electron-builder",
+    "release": "cross-env NODE_ENV=production webpack && electron-builder --publish always",
     "clean": "rimraf dist",
     "webpack": "webpack",
     "postinstall": "electron-builder install-app-deps"
@@ -54,6 +55,7 @@
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
     "electron-store": "^8.1.0",
+    "electron-updater": "^6.7.3",
     "immer": "^10.0.3",
     "jszip": "^3.10.1",
     "monaco-editor": "^0.52.2",
@@ -147,6 +149,10 @@
       "icon": "public/app-icon.png",
       "category": "Development"
     },
-    "publish": null
+    "publish": {
+      "provider": "github",
+      "owner": "FX93Y2",
+      "repo": "db_simulator"
+    }
   }
 }

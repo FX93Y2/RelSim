@@ -95,10 +95,10 @@ jobs:
           ELECTRON_CACHE: ~/.cache/electron
           ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
 
-      - name: Build Electron app
+      - name: Build and publish Electron app
         run: |
           cd electron
-          npm run build -- --${{ matrix.platform }}
+          npm run build -- --${{ matrix.platform }} --publish always
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -110,13 +110,3 @@ jobs:
           path: |
             electron/dist/${{ matrix.artifact }}
             electron/dist/*-unpacked/
-
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: electron/dist/${{ matrix.artifact }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

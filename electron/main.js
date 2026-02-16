@@ -11,6 +11,7 @@ const { getAppPaths } = require('./src/main/paths');
 const { createWindow } = require('./src/main/window');
 const { startBackend, stopBackend } = require('./src/main/backend');
 const { registerApiHandlers } = require('./src/main/api-handlers');
+const { initAutoUpdater } = require('./src/main/updater');
 
 // Application state
 let appPaths = null;
@@ -49,6 +50,10 @@ async function initializeApp() {
     console.log('Creating main window...');
     const preloadPath = path.join(__dirname, 'preload.js');
     createWindow(preloadPath);
+
+    // Initialize auto-updater
+    console.log('Initializing auto-updater...');
+    initAutoUpdater();
 
     isAppReady = true;
     console.log('Application initialized successfully');
