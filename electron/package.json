@@ -1,6 +1,6 @@
 {
   "name": "db-simulator-ui",
-  "version": "0.1.64",
+  "version": "0.1.641",
   "description": "Electron frontend for DB Simulator",
   "main": "main.js",
   "scripts": {
