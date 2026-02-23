@@ -6,7 +6,7 @@ const { app, ipcMain, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { getMainWindow } = require('./window');
 
-const RELEASES_URL = 'https://github.com/FX93Y2/db_simulator/releases/latest';
+const RELEASES_URL = 'https://github.com/FX93Y2/RelSim/releases/latest';
 
 function sendToRenderer(channel, data) {
     const win = getMainWindow();

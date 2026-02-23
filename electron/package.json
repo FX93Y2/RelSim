@@ -1,7 +1,7 @@
 {
-  "name": "db-simulator-ui",
+  "name": "relsim-ui",
   "version": "0.1.64",
-  "description": "Electron frontend for DB Simulator",
+  "description": "Electron frontend for RelSim",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -75,8 +75,8 @@
     "zustand": "^4.4.7"
   },
   "build": {
-    "appId": "com.fx93v2.db-simulator",
-    "productName": "DB Simulator",
+    "appId": "com.fx93v2.relsim",
+    "productName": "RelSim",
     "files": [
       "dist/**/*",
       "src/main/**/*",
@@ -152,7 +152,7 @@
     "publish": {
       "provider": "github",
       "owner": "FX93Y2",
-      "repo": "db_simulator"
+      "repo": "RelSim"
     }
   }
 }

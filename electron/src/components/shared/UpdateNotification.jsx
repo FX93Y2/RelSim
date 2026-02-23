@@ -56,7 +56,7 @@ const UpdateNotification = () => {
                 </Toast.Header>
                 <Toast.Body className="bg-dark text-white">
                     <p className="mb-3">
-                        A new version of DB Simulator is available!
+                        A new version of RelSim is available!
                         <br />
                         <small className="text-muted">
                             Released: {new Date(updateInfo.releaseDate).toLocaleDateString()}

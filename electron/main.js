@@ -184,7 +184,7 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 });
 
 // Handle protocol for deep linking (if needed in the future)
-app.setAsDefaultProtocolClient('db-simulator');
+app.setAsDefaultProtocolClient('relsim');
 
 // Security: Prevent new window creation from renderer
 app.on('web-contents-created', (event, contents) => {

@@ -54,7 +54,7 @@ const GuideOverlay = React.memo(({ visible, onClose, activeSection }) => {
           </button>
         </div>
         <div className="guide-overlay-content" ref={contentRef}>
-          <h1 id="db-simulator">DB Simulator</h1>
+          <h1 id="relsim">RelSim</h1>
           <p>Database education tool for creating realistic synthetic data across various teaching scenarios.</p>
 
           {/* Table of Contents moved to NavigationSidebar */}

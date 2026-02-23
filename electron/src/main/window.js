@@ -18,7 +18,7 @@ function createWindow(preloadPath) {
   // Update preload path in config
   const windowConfig = {
     ...WINDOW_CONFIG,
-    title: `DB Simulator v${app.getVersion()}`,
+    title: `RelSim v${app.getVersion()}`,
     webPreferences: {
       ...WINDOW_CONFIG.webPreferences,
       preload: preloadPath
