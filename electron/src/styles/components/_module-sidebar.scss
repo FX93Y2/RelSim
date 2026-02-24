@@ -14,13 +14,13 @@
   opacity: 0;
   z-index: 99;
   pointer-events: none;
-  
+
   &--visible {
-    max-height: 600px;
+    max-height: 1200px;
     opacity: 1;
     pointer-events: auto;
   }
-  
+
   // Embedded mode - no animation, fills container
   &--embedded {
     position: static;
@@ -30,7 +30,7 @@
     transition: none;
     overflow-y: auto;
     height: 100%;
-    
+
     &.module-sidebar--visible {
       max-height: none;
     }
@@ -44,18 +44,18 @@
   padding: 16px;
   width: fit-content;
   contain: layout style; // CSS containment for better performance
-  
+
   // Theme variants
   .module-sidebar--light & {
     background: var(--theme-card-bg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
-  
+
   .module-sidebar--dark & {
     background: var(--theme-toolbar-bg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
-  
+
   // Embedded mode adjustments
   .module-sidebar--embedded & {
     border-radius: 0;
@@ -63,8 +63,8 @@
     margin-top: 0;
     padding: 16px;
     width: 100%;
-    height: 100%;
-    
+    min-height: 100%;
+
     // Use YAML editor background for embedded mode
     background: var(--theme-yaml-editor-bg);
   }
@@ -72,7 +72,7 @@
 
 .module-sidebar__section {
   margin-bottom: 8px;
-  
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -88,28 +88,28 @@
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  
+
   .module-sidebar--light & {
     background: transparent;
     color: var(--theme-text);
-    
+
     &:hover {
       background: var(--theme-hover-bg);
     }
-    
+
     &.active {
       background: var(--theme-active-bg);
     }
   }
-  
+
   .module-sidebar--dark & {
     background: transparent;
     color: var(--theme-text);
-    
+
     &:hover {
       background: var(--theme-hover-bg);
     }
-    
+
     &.active {
       background: var(--theme-active-bg);
     }
@@ -122,20 +122,20 @@
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  
+
   .module-sidebar--light & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar--dark & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar__section-header.active & {
     .module-sidebar--light & {
       color: var(--theme-text);
     }
-    
+
     .module-sidebar--dark & {
       color: var(--theme-text);
     }
@@ -145,15 +145,15 @@
 .module-sidebar__chevron {
   font-size: 16px;
   transition: transform 0.2s ease;
-  
+
   &.rotated {
     transform: rotate(180deg);
   }
-  
+
   .module-sidebar--light & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar--dark & {
     color: var(--theme-muted-text);
   }
@@ -161,16 +161,16 @@
 
 .module-sidebar__section-content {
   overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-  
+  transition: max-height 0.3s ease-in-out, opacity 0.2s ease, padding 0.3s ease;
+
   &.collapsed {
     max-height: 0;
     opacity: 0;
     padding: 0 16px;
   }
-  
+
   &.expanded {
-    max-height: 400px;
+    max-height: 1200px;
     opacity: 1;
     padding: 12px 16px;
   }
@@ -203,44 +203,44 @@
   width: 100%; // Fill the fixed grid track width
   aspect-ratio: 1; // Square proportions ensure uniform height
   min-height: 0; // Allow flexible height
-  
+
   &:active:not(.disabled) {
     cursor: grabbing;
   }
-  
+
   // Theme variants
   .module-sidebar--light & {
     background: var(--theme-card-bg);
     color: var(--theme-text);
-    
+
     &:hover:not(.disabled) {
       background: var(--theme-hover-bg);
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
-    
+
     &:active:not(.disabled) {
       transform: translateY(0);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
   }
-  
+
   .module-sidebar--dark & {
     background: var(--theme-toolbar-bg);
     color: var(--theme-text);
-    
+
     &:hover:not(.disabled) {
       background: var(--theme-hover-bg);
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
-    
+
     &:active:not(.disabled) {
       transform: translateY(0);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
   }
-  
+
   &.disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -260,24 +260,24 @@
 .module-sidebar__svg {
   width: clamp(28px, 7vw, 36px); // Responsive SVG size
   height: clamp(28px, 7vw, 36px);
-  
+
   // Theme-aware SVG coloring
   .module-sidebar--light & {
     fill: var(--theme-muted-text);
     stroke: var(--theme-muted-text);
   }
-  
+
   .module-sidebar--dark & {
     fill: var(--theme-muted-text);
     stroke: var(--theme-muted-text);
   }
-  
+
   .module-sidebar__button:hover:not(.disabled) & {
     .module-sidebar--light & {
       fill: var(--theme-text);
       stroke: var(--theme-text);
     }
-    
+
     .module-sidebar--dark & {
       fill: var(--theme-text);
       stroke: var(--theme-text);
@@ -288,21 +288,21 @@
 .module-sidebar__react-icon {
   width: clamp(28px, 7vw, 36px); // Responsive React icon size
   height: clamp(28px, 7vw, 36px);
-  
+
   // Theme-aware React icon coloring
   .module-sidebar--light & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar--dark & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar__button:hover:not(.disabled) & {
     .module-sidebar--light & {
       color: var(--theme-text);
     }
-    
+
     .module-sidebar--dark & {
       color: var(--theme-text);
     }
@@ -324,20 +324,20 @@
   font-size: 20px;
   font-weight: bold;
   line-height: 1;
-  
+
   .module-sidebar--light & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar--dark & {
     color: var(--theme-muted-text);
   }
-  
+
   .module-sidebar__button:hover:not(.disabled) & {
     .module-sidebar--light & {
       color: var(--theme-text);
     }
-    
+
     .module-sidebar--dark & {
       color: var(--theme-text);
     }
@@ -352,11 +352,11 @@
   overflow: hidden; // Prevent text overflow
   text-overflow: ellipsis;
   white-space: nowrap;
-  
+
   .module-sidebar--light & {
     color: var(--theme-text);
   }
-  
+
   .module-sidebar--dark & {
     color: var(--theme-text);
   }
@@ -368,6 +368,7 @@
     max-height: 0;
     opacity: 0;
   }
+
   to {
     max-height: 600px;
     opacity: 1;
@@ -389,7 +390,7 @@
   align-items: center;
   gap: 8px;
   width: 96px;
-  
+
   .module-sidebar--dark & {
     background: var(--theme-toolbar-bg);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
