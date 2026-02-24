@@ -104,8 +104,7 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "public/app-icon.ico",
       "requestedExecutionLevel": "requireAdministrator",

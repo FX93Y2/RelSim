@@ -156,31 +156,31 @@
     color: var(--theme-text) !important; // Override Bootstrap btn-primary color
 
     &:hover:not(:disabled) {
-      background-color: var(--theme-hover-bg);
-      color: var(--theme-primary);
+      background-color: var(--theme-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+      color: var(--theme-primary, #0d6efd) !important;
     }
 
     &:active:not(:disabled) {
-      background-color: var(--theme-active-bg);
-      color: var(--theme-primary);
+      background-color: var(--theme-active-bg, rgba(0, 0, 0, 0.12)) !important;
+      color: var(--theme-primary, #0d6efd) !important;
     }
 
     &:focus-visible {
-      outline: 2px solid var(--theme-hover-bg);
-      outline-offset: 2px;
+      outline: 2px solid var(--theme-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+      outline-offset: 2px !important;
     }
 
     // Dark theme styling
     .theme-dark & {
-      background-color: var(--theme-toolbar-bg, #2d2d2d);
-      color: var(--theme-text, #ffffff);
+      background-color: var(--theme-toolbar-bg, #2d2d2d) !important;
+      color: var(--theme-text, #ffffff) !important;
 
       &:hover:not(:disabled) {
-        background-color: var(--theme-hover-bg, rgba(255, 255, 255, 0.05));
+        background-color: var(--theme-hover-bg, rgba(255, 255, 255, 0.05)) !important;
       }
 
       &:active:not(:disabled) {
-        background-color: var(--theme-hover-bg, rgba(255, 255, 255, 0.08));
+        background-color: var(--theme-hover-bg, rgba(255, 255, 255, 0.08)) !important;
       }
     }
   }
