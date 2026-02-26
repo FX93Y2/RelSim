@@ -49,24 +49,68 @@ async function saveFile(filePath, content) {
 async function deleteResult(resultPath, appPaths) {
   try {
     console.log(`Deleting simulation result: ${resultPath}`);
-    
     // Resolve the full path to the result file
     const resolvedPath = resolveDatabasePath(resultPath, appPaths);
-    
+
     if (!resolvedPath) {
       console.error(`Result file not found at any resolved path`);
       return { success: false, error: 'Result file not found' };
     }
-    
+
     // Add a small delay before deletion to ensure any database connections are closed
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] [ELECTRON] Attempting to delete file: ${resolvedPath}`);
-    
+
     fs.unlinkSync(resolvedPath);
     console.log(`[${timestamp}] [ELECTRON] Successfully deleted result file: ${resolvedPath}`);
-    
+
+    // Clean up matching per-run log files (<db_name>_YYYYMMDD_HHMMSS.log)
+    // in <projectDir>/logs/, with a fallback scan of <projectDir> itself.
+    try {
+      const dbName = path.basename(resolvedPath, '.db');
+      const projectDir = path.dirname(resolvedPath);
+      const prefix = `${dbName}_`;
+
+      const dirsToScan = [
+        path.join(projectDir, 'logs'),
+        projectDir
+      ];
+
+      for (const dir of dirsToScan) {
+        if (!fs.existsSync(dir)) continue;
+
+        const logFiles = fs.readdirSync(dir).filter(
+          f => f.startsWith(prefix) && f.endsWith('.log')
+        );
+
+        for (const logFile of logFiles) {
+          const logPath = path.join(dir, logFile);
+          try {
+            fs.unlinkSync(logPath);
+            console.log(`[ELECTRON] Deleted run log: ${logPath}`);
+          } catch (logErr) {
+            console.warn(`[ELECTRON] Could not delete run log ${logPath}: ${logErr.message}`);
+          }
+        }
+      }
+
+      // Remove the logs/ sub-folder if it is now empty
+      const logsDir = path.join(projectDir, 'logs');
+      if (fs.existsSync(logsDir)) {
+        const remaining = fs.readdirSync(logsDir);
+        if (remaining.length === 0) {
+          fs.rmdirSync(logsDir);
+          console.log(`[ELECTRON] Removed empty logs directory: ${logsDir}`);
+        }
+      }
+    } catch (logCleanupErr) {
+      // Non-fatal — the DB was already deleted successfully
+      console.warn(`[ELECTRON] Error during log cleanup: ${logCleanupErr.message}`);
+    }
+
+
     return { success: true };
   } catch (error) {
     const timestamp = new Date().toISOString();
@@ -74,6 +118,7 @@ async function deleteResult(resultPath, appPaths) {
     return { success: false, error: error.message };
   }
 }
+
 
 /**
  * Scan for simulation results in a project folder
@@ -84,25 +129,25 @@ async function deleteResult(resultPath, appPaths) {
 async function scanProjectResults(projectId, appPaths) {
   try {
     console.log(`Scanning for simulation results in project: ${projectId}`);
-    
+
     // Determine the output directory for this project using appPaths
     const projectOutputDir = path.join(appPaths.output, projectId);
-    
+
     console.log(`Checking project output directory: ${projectOutputDir}`);
-    
+
     // Check if the directory exists
     if (!fs.existsSync(projectOutputDir)) {
       console.log(`Project output directory does not exist: ${projectOutputDir}`);
       return { success: true, results: [] };
     }
-    
+
     // Get all .db files in the directory
     const files = fs.readdirSync(projectOutputDir)
       .filter(file => file.endsWith('.db'))
       .map(file => {
         const filePath = path.join(projectOutputDir, file);
         const stats = fs.statSync(filePath);
-        
+
         return {
           id: file.replace('.db', ''),
           name: file.replace('.db', ''),
@@ -112,15 +157,15 @@ async function scanProjectResults(projectId, appPaths) {
         };
       })
       .sort((a, b) => b.created - a.created); // Sort by creation date, newest first
-    
+
     console.log(`Found ${files.length} database files in ${projectOutputDir}`);
     if (files.length > 0) {
       console.log(`First result path: ${files[0].path}`);
     }
-    
-    return { 
-      success: true, 
-      results: files 
+
+    return {
+      success: true,
+      results: files
     };
   } catch (error) {
     console.error(`Error scanning for simulation results: ${error.message}`);
@@ -137,30 +182,30 @@ async function showDirectoryPicker(options = {}) {
   try {
     const defaultPath = options.defaultPath || app.getPath('documents');
     const title = options.title || 'Select Export Directory';
-    
+
     console.log(`Showing directory picker dialog with default path: ${defaultPath}`);
-    
+
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory', 'createDirectory'],
       defaultPath,
       title,
       buttonLabel: options.buttonLabel || 'Select Folder'
     });
-    
+
     if (result.canceled) {
       console.log('Directory selection was canceled');
       return { success: false, canceled: true };
     }
-    
+
     const selectedPath = result.filePaths[0];
     console.log(`Selected directory: ${selectedPath}`);
-    
+
     // Verify the directory is writable
     const writeTestResult = await testDirectoryWritable(selectedPath);
     if (!writeTestResult.success) {
       return writeTestResult;
     }
-    
+
     return { success: true, path: selectedPath };
   } catch (error) {
     console.error(`Error showing directory picker: ${error.message}`);
@@ -182,8 +227,8 @@ async function testDirectoryWritable(dirPath) {
     return { success: true };
   } catch (writeError) {
     console.error(`Directory is not writable: ${writeError.message}`);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: 'Selected directory is not writable. Please choose a different directory.',
       path: dirPath
     };
@@ -243,16 +288,16 @@ async function listDirectory(dirPath, options = {}) {
     if (!fs.existsSync(dirPath)) {
       return { success: false, error: 'Directory does not exist' };
     }
-    
+
     const files = fs.readdirSync(dirPath);
-    
+
     // Apply filters if specified
     let filteredFiles = files;
-    
+
     if (options.extension) {
       filteredFiles = filteredFiles.filter(file => file.endsWith(options.extension));
     }
-    
+
     if (options.includeStats) {
       filteredFiles = filteredFiles.map(file => {
         const filePath = path.join(dirPath, file);
@@ -268,7 +313,7 @@ async function listDirectory(dirPath, options = {}) {
         };
       });
     }
-    
+
     return { success: true, files: filteredFiles };
   } catch (error) {
     console.error(`Error listing directory ${dirPath}: ${error.message}`);
@@ -287,11 +332,11 @@ async function copyFile(sourcePath, destPath) {
     // Ensure destination directory exists
     const destDir = path.dirname(destPath);
     await ensureDirectory(destDir);
-    
+
     // Copy the file
     fs.copyFileSync(sourcePath, destPath);
     console.log(`Successfully copied file from ${sourcePath} to ${destPath}`);
-    
+
     return { success: true };
   } catch (error) {
     console.error(`Error copying file from ${sourcePath} to ${destPath}: ${error.message}`);
@@ -310,11 +355,11 @@ async function moveFile(sourcePath, destPath) {
     // Ensure destination directory exists
     const destDir = path.dirname(destPath);
     await ensureDirectory(destDir);
-    
+
     // Move the file
     fs.renameSync(sourcePath, destPath);
     console.log(`Successfully moved file from ${sourcePath} to ${destPath}`);
-    
+
     return { success: true };
   } catch (error) {
     console.error(`Error moving file from ${sourcePath} to ${destPath}: ${error.message}`);

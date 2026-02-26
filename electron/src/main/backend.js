@@ -12,6 +12,7 @@ const { API_BASE_URL, BACKEND_CONFIG } = require('./config');
 
 let backendProcess = null;
 let isBackendReady = false;
+let logStream = null; // Shared log stream used by both startup paths
 
 /**
  * Start the Python backend
@@ -26,7 +27,6 @@ function startBackend(appPaths) {
   try {
     console.log('Starting Python backend...');
 
-    // Check if we should use the PyInstaller executable or copied Python environment
     const useExecutablePath = app.isPackaged
       ? path.join(process.resourcesPath, 'python', 'USE_EXECUTABLE')
       : path.join(__dirname, '..', '..', '..', 'python', 'USE_EXECUTABLE');
@@ -65,23 +65,19 @@ function startBackend(appPaths) {
  * @param {Object} appPaths - Application paths object
  */
 function startBackendWithExecutable(appPaths) {
-  // Use the PyInstaller executable in packaged mode
   const exeName = process.platform === 'win32' ? 'db_simulator_api.exe' : 'db_simulator_api';
   let backendExePath = app.isPackaged
     ? path.join(process.resourcesPath, 'python', 'dist', 'db_simulator_api', exeName)
     : path.join(__dirname, '..', '..', '..', 'python', 'dist', 'db_simulator_api', exeName);
 
-  // Log the path we're using
   console.log(`Backend executable path: ${backendExePath}`);
 
-  // Check if the executable exists
   if (!fs.existsSync(backendExePath)) {
     console.error(`Backend executable not found at: ${backendExePath}`);
     console.error(`Current working directory: ${process.cwd()}`);
     console.error(`Resource path: ${process.resourcesPath}`);
     console.error(`Is packaged: ${app.isPackaged}`);
 
-    // Try alternative paths if not found
     const alternativePaths = [
       path.join(process.resourcesPath, 'app.asar.unpacked', 'python', 'dist', 'db_simulator_api', exeName),
       path.join(process.cwd(), 'resources', 'python', 'dist', 'db_simulator_api', exeName)
@@ -97,7 +93,6 @@ function startBackendWithExecutable(appPaths) {
     }
   }
 
-  // Pass important paths to the backend as command line arguments
   const args = ['api',
     '--output-dir', appPaths.output,
     '--config-db', appPaths.configDb,
@@ -165,16 +160,14 @@ function startBackendWithExecutable(appPaths) {
     console.warn('Unable to create logs directory:', e.message);
   }
   const logFilePath = path.join(logsDir, 'backend.log');
-  let logStream = null;
   try {
     logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
-    const banner = `\n==== Backend start ${new Date().toISOString()} ====${app.isPackaged ? ' [packaged]' : ''}\n`;
+    const banner = `\n==== Backend start (executable) ${new Date().toISOString()} ====${app.isPackaged ? ' [packaged]' : ''}\n`;
     logStream.write(banner);
   } catch (e) {
     console.warn('Unable to open backend log file:', e.message);
   }
 
-  // Start the backend process
   console.log(`Spawning backend process: ${backendExePath} ${args.join(' ')}`);
   backendProcess = spawn(backendExePath, args, {
     stdio: 'pipe',
@@ -185,7 +178,6 @@ function startBackendWithExecutable(appPaths) {
     }
   });
 
-  // Pipe backend stdout/stderr to file and console
   if (backendProcess.stdout) {
     backendProcess.stdout.on('data', (chunk) => {
       const text = chunk.toString();
@@ -211,13 +203,12 @@ function startBackendWithExecutable(appPaths) {
 function startBackendWithPython(appPaths) {
   console.log('Starting backend with Python directly...');
 
-  // Determine correct Python path for packaged app
-  let pythonExePath = process.platform === 'darwin' ? 'python3' : 'python'; // Use python3 on macOS, python elsewhere
+  // Use python3 on macOS, python elsewhere
+  let pythonExePath = process.platform === 'darwin' ? 'python3' : 'python';
   let pythonScriptPath = app.isPackaged
     ? path.join(process.resourcesPath, 'python', 'main.py')
     : path.join(__dirname, '..', '..', '..', 'python', 'main.py');
 
-  // Check if packaged Python exists and use it if available
   if (app.isPackaged) {
     const pythonBinDir = process.platform === 'win32' ? 'Scripts' : 'bin';
     const pythonExeName = process.platform === 'win32' ? 'python.exe' : 'python';
@@ -230,15 +221,12 @@ function startBackendWithPython(appPaths) {
     }
   }
 
-  // Log the paths we're using
   console.log(`Python executable path: ${pythonExePath}`);
   console.log(`Python script path: ${pythonScriptPath}`);
 
-  // Check if the Python script exists
   if (!fs.existsSync(pythonScriptPath)) {
     console.error(`Python script not found at: ${pythonScriptPath}`);
 
-    // Try alternative paths
     const alternativePaths = [
       path.join(process.resourcesPath, 'app.asar.unpacked', 'python', 'main.py'),
       path.join(process.resourcesPath, 'python', 'main.py'),
@@ -255,12 +243,28 @@ function startBackendWithPython(appPaths) {
     }
   }
 
-  // Pass important paths to the Python backend as environment variables
+  // Prepare log file (same structure as the executable path)
+  const logsDir = path.join(appPaths.output, 'logs');
+  try {
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+  } catch (e) {
+    console.warn('Unable to create logs directory:', e.message);
+  }
+  const logFilePath = path.join(logsDir, 'backend.log');
+  try {
+    logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+    const banner = `\n==== Backend start (python) ${new Date().toISOString()} ====${app.isPackaged ? ' [packaged]' : ''}\n`;
+    logStream.write(banner);
+  } catch (e) {
+    console.warn('Unable to open backend log file:', e.message);
+  }
+
   const env = {
     ...process.env,
     DB_SIMULATOR_OUTPUT_DIR: appPaths.output,
     DB_SIMULATOR_CONFIG_DB: appPaths.configDb,
     DB_SIMULATOR_PACKAGED: app.isPackaged ? 'true' : 'false',
+    DB_SIMULATOR_LOG_FILE: logFilePath,
     PYTHONUNBUFFERED: '1'  // Make Python output unbuffered for better logging
   };
 
@@ -271,29 +275,35 @@ function startBackendWithPython(appPaths) {
     }
   });
 
-  // Start the backend process
   console.log(`Spawning Python process: ${pythonExePath} ${pythonScriptPath} api`);
   backendProcess = spawn(pythonExePath, [pythonScriptPath, 'api'], {
     stdio: 'pipe',
     env
   });
 
+  if (backendProcess.stdout) {
+    backendProcess.stdout.on('data', (chunk) => {
+      const text = chunk.toString();
+      if (logStream) logStream.write(text);
+      process.stdout.write(`[backend] ${text}`);
+    });
+  }
+  if (backendProcess.stderr) {
+    backendProcess.stderr.on('data', (chunk) => {
+      const text = chunk.toString();
+      if (logStream) logStream.write(text);
+      process.stderr.write(`[backend:err] ${text}`);
+    });
+  }
+
   setupBackendProcessHandlers();
 }
 
 /**
- * Common process handler setup for backend processes
+ * Common process handler setup for backend processes.
+ * stdout/stderr piping is handled by each startup function individually.
  */
 function setupBackendProcessHandlers() {
-  // Log stdout from the process
-  backendProcess.stdout.on('data', (data) => {
-    console.log(`Backend stdout: ${data.toString().trim()}`);
-  });
-
-  // Log stderr from the process
-  backendProcess.stderr.on('data', (data) => {
-    console.error(`Backend stderr: ${data.toString().trim()}`);
-  });
 
   backendProcess.on('error', (err) => {
     console.error(`Failed to start backend process: ${err.message}`);
@@ -318,7 +328,6 @@ function setupBackendProcessHandlers() {
     console.log(`Backend process exited with code ${code}`);
     if (code !== 0 && code !== null) {
       console.error(`Backend process exited unexpectedly with code ${code}`);
-      // Notify the main window about backend closure
       const { getMainWindow } = require('./window');
       const mainWindow = getMainWindow();
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -327,7 +336,12 @@ function setupBackendProcessHandlers() {
     }
     backendProcess = null;
     isBackendReady = false;
-    try { if (logStream) logStream.end(`\n==== Backend stop ${new Date().toISOString()} (code ${code}) ====`); } catch { }
+    try {
+      if (logStream) {
+        logStream.end(`\n==== Backend stop ${new Date().toISOString()} (code ${code}) ====`);
+        logStream = null;
+      }
+    } catch { }
   });
 
   // Wait for backend to start
@@ -341,13 +355,11 @@ function setupBackendProcessHandlers() {
 function checkBackendStatus(maxTries = 30) {
   console.log(`Checking if backend is ready (remaining tries: ${maxTries})...`);
 
-  // Exit if no more tries left
   if (maxTries <= 0) {
     console.error('Backend failed to start after multiple attempts');
     return;
   }
 
-  // Try to connect to backend
   axios.get(`${API_BASE_URL}/health`, { timeout: 1000 })
     .then(response => {
       if (response.status === 200) {
@@ -375,7 +387,6 @@ async function waitForBackend() {
   for (let i = 0; i < maxRetries; i++) {
     try {
       console.log(`Checking if backend is ready (attempt ${i + 1}/${maxRetries})...`);
-      // Check /api/projects which is a working endpoint instead of root path
       const response = await axios.get(`${API_BASE_URL}/projects`);
       if (response.status === 200) {
         console.log('Backend is ready!');
@@ -384,13 +395,11 @@ async function waitForBackend() {
       }
     } catch (error) {
       console.log(`Backend not ready yet, waiting ${retryDelayMs}ms...`);
-      // Wait before retry
       await new Promise(resolve => setTimeout(resolve, retryDelayMs));
     }
   }
 
   console.error('Backend failed to start or is not responding');
-  // Continue anyway since some endpoints might still work
   return true;
 }
 
@@ -406,7 +415,7 @@ function stopBackend() {
       try {
         const { exec } = require('child_process');
         console.log(`Executing taskkill for PID ${backendProcess.pid}`);
-        exec(`taskkill /F /PID ${backendProcess.pid} /T`, (error, stdout, stderr) => {
+        exec(`taskkill /F /PID ${backendProcess.pid} /T`, (error) => {
           if (error) {
             // It might have already exited
             console.warn(`taskkill failed (process might be gone): ${error.message}`);
@@ -416,8 +425,6 @@ function stopBackend() {
         console.error(`Error executing taskkill: ${e.message}`);
       }
     } else {
-      // On other platforms, standard kill usually works well enough, 
-      // but strictly we might want to kill the group. For now, SIGTERM is standard.
       backendProcess.kill();
     }
 

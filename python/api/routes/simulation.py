@@ -22,6 +22,7 @@ from ..utils.response_helpers import (
     success_response, error_response, not_found_response, validation_error_response,
     handle_exception, require_json_fields, log_api_request
 )
+from ..utils.run_logger import run_log_context
 
 # Create Blueprint
 simulation_bp = Blueprint('simulation', __name__)
@@ -56,12 +57,17 @@ def run_sim():
             if db_config:
                 db_config_content = db_config['content']
         
+        # Derive project_id and db_name for per-run log placement
+        project_id = data.get('project_id')
+        db_name = os.path.splitext(os.path.basename(data['database_path']))[0]
+
         # Run simulation with database config if available
-        if db_config_content:
-            results = run_simulation(config['content'], db_config_content, data['database_path'])
-        else:
-            # Fallback to old method for backward compatibility
-            results = run_simulation(config['content'], data['database_path'])
+        with run_log_context(project_id=project_id, db_name=db_name):
+            if db_config_content:
+                results = run_simulation(config['content'], db_config_content, data['database_path'])
+            else:
+                # Fallback to old method for backward compatibility
+                results = run_simulation(config['content'], data['database_path'])
         
         return success_response({
             "results": results
@@ -95,37 +101,38 @@ def generate_and_simulate():
         # Delete existing database file if it exists
         _cleanup_existing_database(output_dir, project_id, db_name, db_config)
         
-        # Generate database with simulation config for attribute detection
-        logger.info(f"Generating database with project_id: {project_id}")
-        from src.generator import generate_database_with_formula_support
-        db_path, generator = generate_database_with_formula_support(
-            db_config['content'], 
-            output_dir,
-            db_name,
-            project_id,
-            sim_config['content']  # Pass simulation config content for attribute column detection
-        )
-        
-        # Verify database creation
-        if not _verify_database_creation(db_path):
-            return error_response(f"Failed to create database file at {db_path}", status_code=500)
-        
-        # Run simulation
-        logger.info(f"Running simulation using database at: {db_path}")
-        results = run_simulation(
-            sim_config['content'],
-            db_config['content'],
-            db_path
-        )
-        
-        # Resolve formula attributes after simulation (transparent to user)
-        if generator.has_pending_formulas():
-            logger.info("Resolving formula-based attributes after simulation completion")
-            formula_success = generator.resolve_formulas(db_path)
-            if formula_success:
-                logger.info("Formula resolution completed successfully")
-            else:
-                logger.warning("Formula resolution failed, but continuing with simulation results")
+        with run_log_context(project_id=project_id, db_name=db_name):
+            # Generate database with simulation config for attribute detection
+            logger.info(f"Generating database with project_id: {project_id}")
+            from src.generator import generate_database_with_formula_support
+            db_path, generator = generate_database_with_formula_support(
+                db_config['content'], 
+                output_dir,
+                db_name,
+                project_id,
+                sim_config['content']  # Pass simulation config content for attribute column detection
+            )
+            
+            # Verify database creation
+            if not _verify_database_creation(db_path):
+                return error_response(f"Failed to create database file at {db_path}", status_code=500)
+            
+            # Run simulation
+            logger.info(f"Running simulation using database at: {db_path}")
+            results = run_simulation(
+                sim_config['content'],
+                db_config['content'],
+                db_path
+            )
+            
+            # Resolve formula attributes after simulation (transparent to user)
+            if generator.has_pending_formulas():
+                logger.info("Resolving formula-based attributes after simulation completion")
+                formula_success = generator.resolve_formulas(db_path)
+                if formula_success:
+                    logger.info("Formula resolution completed successfully")
+                else:
+                    logger.warning("Formula resolution failed, but continuing with simulation results")
         
         # Verify database after simulation and prepare response path
         db_path_for_response = _prepare_response_path(db_path, output_dir, project_id)

@@ -17,6 +17,7 @@ from ..utils.response_helpers import (
     success_response, error_response, not_found_response, validation_error_response,
     handle_exception, require_json_fields, log_api_request
 )
+from ..utils.run_logger import run_log_context
 
 # Create Blueprint
 database_bp = Blueprint('database', __name__)
@@ -44,10 +45,12 @@ def generate_db():
         
         output_dir = data.get('output_dir', 'output')
         db_name = data.get('name')
+        project_id = data.get('project_id')
         
         # Pass configuration content directly to generate_database
         logger.info(f"Generating database directly from config content")
-        db_path = generate_database(config['content'], output_dir, db_name)
+        with run_log_context(project_id=project_id, db_name=db_name):
+            db_path = generate_database(config['content'], output_dir, db_name)
         
         return success_response({
             "database_path": str(db_path)

@@ -3,7 +3,7 @@
   &__group {
     margin-bottom: 20px;
   }
-  
+
   &__actions {
     display: flex;
     justify-content: flex-end;
@@ -15,41 +15,41 @@
 // Attribute Editor Drag and Drop Styles
 .attribute-editor-card {
   transition: all 0.2s ease;
-  
+
   &.dragging {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transform: scale(1.02);
   }
-  
+
   .attribute-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    
+
     &-left {
       display: flex;
       align-items: center;
       gap: 8px;
     }
   }
-  
+
   .drag-handle {
     cursor: grab;
     padding: 4px;
     border-radius: 4px;
     color: var(--bs-secondary);
     transition: all 0.2s ease;
-    
+
     &:hover {
       color: var(--bs-primary);
       background-color: var(--bs-light);
     }
-    
+
     &:active {
       cursor: grabbing;
     }
   }
-  
+
   .attribute-name {
     font-weight: 500;
     color: var(--bs-dark);
@@ -62,7 +62,7 @@
     .attribute-name {
       color: var(--bs-light);
     }
-    
+
     .drag-handle:hover {
       background-color: var(--bs-dark);
     }
@@ -79,7 +79,7 @@
   overflow: visible;
   background-color: var(--theme-editor-bg);
   margin-bottom: 1rem;
-  
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -95,7 +95,7 @@
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   overflow: hidden; // ensure header contents respect rounded corners
-  
+
   .grid-header-cell {
     padding: 8px 12px;
     font-weight: 600;
@@ -104,22 +104,22 @@
     display: flex;
     align-items: center;
   }
-  
+
   // Decision outcomes grid (probability mode)
   &.decide-probability {
     grid-template-columns: 1fr 120px 60px;
   }
-  
+
   // Decision outcomes grid (condition mode)
   &.decide-condition {
     grid-template-columns: 1fr 2fr 60px;
   }
-  
+
   // Assignment attributes grid
   &.assign-attributes {
     grid-template-columns: 200px 1.5fr 1fr 60px;
   }
-  
+
   // Resource requirements grid
   &.resource-requirements {
     grid-template-columns: 1fr 1fr 1.2fr 120px 60px;
@@ -133,11 +133,11 @@
   border-bottom: 1px solid var(--theme-border);
   background-color: var(--theme-editor-bg);
   color: var(--theme-text);
-  
+
   &:hover {
     background-color: var(--theme-hover-bg);
   }
-  
+
   &:last-child {
     border-bottom: none;
     // Round bottom corners on the final row so the body matches container radius
@@ -146,43 +146,43 @@
     // Allow overlays (dropdowns) to escape the row bounds
     overflow: visible;
   }
-  
+
   .grid-cell {
     padding: 8px 12px;
     display: flex;
     align-items: center;
     min-height: 44px;
     position: relative;
-    
+
     &.cell-center {
       justify-content: center;
     }
-    
+
     &.cell-end {
       justify-content: flex-end;
     }
-    
+
     // Fix dropdown width and positioning
     .input-group .dropdown-toggle {
       min-width: 40px;
       border-left: 1px solid var(--bs-border-color);
     }
-    
+
     .dropdown-menu {
       z-index: 1050;
       min-width: 100%;
     }
   }
-  
+
   // Decision outcomes grid (probability mode)
   &.decide-probability {
     grid-template-columns: 1fr 120px 60px;
   }
-  
+
   // Decision outcomes grid (condition mode)  
   &.decide-condition {
     grid-template-columns: 1fr 2fr 60px;
-    
+
     .condition-fields {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -190,12 +190,12 @@
       width: 100%;
     }
   }
-  
+
   // Assignment attributes grid
   &.assign-attributes {
     grid-template-columns: 200px 1.5fr 1fr 60px;
   }
-  
+
   // Resource requirements grid
   &.resource-requirements {
     grid-template-columns: 1fr 1fr 1.2fr 120px 60px;
@@ -205,13 +205,13 @@
 // Step editor specific components styling
 .step-editor-section {
   margin-bottom: 1.5rem;
-  
+
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
-    
+
     h6 {
       margin: 0;
       font-weight: 600;
@@ -227,13 +227,13 @@
   padding: 8px 16px;
   transition: all 0.2s ease;
   color: var(--theme-text) !important;
-  
+
   &:hover {
     border-color: var(--theme-primary) !important;
     background-color: var(--theme-hover-bg) !important;
     color: var(--theme-primary) !important;
   }
-  
+
   &:focus {
     box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
     border-color: var(--theme-primary) !important;
@@ -244,29 +244,30 @@
 
 // Step Editor Modal Styles (allow Bootstrap size classes to work)
 .step-editor-modal {
+
   // Only override large modals to be extra wide for tables
   &.modal-lg .modal-dialog {
     max-width: 960px;
     width: 90vw;
   }
-  
+
   // Let Bootstrap handle default and medium sizes normally
   // Default: ~500px, Medium: ~800px, Large: custom 960px above
-  
+
   .modal-content {
     background-color: var(--theme-modal-bg);
   }
-  
+
   .modal-header {
     background-color: var(--theme-modal-header-bg);
     border-bottom: none;
   }
-  
+
   .modal-body {
     padding: 1.5rem;
     background-color: var(--theme-modal-bg);
   }
-  
+
   .modal-footer {
     background-color: var(--theme-modal-bg);
     border-top: none;
@@ -287,7 +288,7 @@
   border-radius: 0.375rem;
   padding: 1rem;
   margin-bottom: 1rem;
-  
+
   .section-title {
     color: var(--theme-text);
     font-weight: 600;
@@ -306,44 +307,44 @@
   font-weight: 500;
   color: var(--theme-text);
   margin-bottom: 0.5rem;
-  
+
   svg {
     color: var(--theme-primary);
   }
 }
 
-.form-control, 
+.form-control,
 .form-select {
   background-color: var(--theme-input-bg);
   border-color: var(--theme-input-border);
   color: var(--theme-text);
   transition: border-color 0.15s ease-in-out;
-  
+
   &:hover:not(:focus):not(:disabled):not([readonly]) {
     border-color: var(--theme-input-focus-border);
   }
-  
+
   // Ensure hover works with Bootstrap utility classes (like .pe-5)
   &.pe-5:hover:not(:focus):not(:disabled):not([readonly]),
   &[class*="pe-"]:hover:not(:focus):not(:disabled):not([readonly]) {
     border-color: var(--theme-input-focus-border) !important;
   }
-  
+
   &:focus {
     background-color: var(--theme-input-bg);
     border-color: var(--theme-input-focus-border);
     color: var(--theme-text);
     box-shadow: 0 0 0 0.2rem rgba(var(--theme-primary-rgb), 0.25);
   }
-  
+
   &::placeholder {
     color: var(--theme-muted-text);
   }
-  
+
   &.is-invalid {
     border-color: var(--bs-danger, #dc3545);
   }
-  
+
   &:disabled,
   &[readonly],
   &.form-control-readonly {
@@ -377,13 +378,13 @@ textarea.form-control {
   background-color: var(--theme-card-bg);
   border-color: var(--theme-border);
   color: var(--theme-text);
-  
+
   &.alert-danger {
     background-color: rgba(220, 53, 69, 0.1);
     border-color: rgba(220, 53, 69, 0.3);
     color: var(--bs-danger, #dc3545);
   }
-  
+
   &.alert-info {
     background-color: rgba(13, 202, 240, 0.1);
     border-color: rgba(13, 202, 240, 0.3);
@@ -399,7 +400,7 @@ textarea.form-control {
 .type-selector {
   position: relative;
   width: 100%;
-  
+
   // Main input container - looks like a single form control
   .type-selector-input {
     background-color: var(--theme-input-bg);
@@ -411,17 +412,17 @@ textarea.form-control {
     padding: 0.375rem 0.75rem; // Default form-control padding
     transition: border-color 0.15s ease-in-out;
     min-height: 38px; // Match form-control height
-    
+
     &:hover {
       border-color: var(--theme-input-focus-border);
     }
-    
+
     &:focus-within {
       border-color: var(--theme-input-focus-border);
       outline: none;
       box-shadow: 0 0 0 0.2rem rgba(var(--theme-primary-rgb), 0.25);
     }
-    
+
     // Small size variant
     &.type-selector-input-sm {
       padding: 0.25rem 0.5rem;
@@ -429,7 +430,7 @@ textarea.form-control {
       border-radius: 0.25rem;
     }
   }
-  
+
   // Icon buttons within the input
   .type-selector-icon-btn {
     background: transparent;
@@ -443,23 +444,23 @@ textarea.form-control {
     transition: all 0.2s ease;
     min-width: 20px;
     height: 20px;
-    
+
     &:hover {
       background-color: var(--theme-hover-bg);
       color: var(--theme-primary);
     }
-    
+
     &:focus {
       outline: none;
       background-color: var(--theme-hover-bg);
       color: var(--theme-primary);
     }
-    
+
     &:active {
       background-color: var(--theme-active-bg);
     }
   }
-  
+
   // Type display text
   .type-selector-value {
     flex: 1;
@@ -470,16 +471,16 @@ textarea.form-control {
     color: var(--theme-text);
     font-size: 0.875rem;
   }
-  
+
   // Chevron rotation animation
   .chevron {
     transition: transform 0.2s ease;
-    
+
     &.chevron-up {
       transform: rotate(180deg);
     }
   }
-  
+
   // Dropdown menu styling - high z-index to escape modal
   .type-selector-menu {
     position: fixed;
@@ -492,10 +493,10 @@ textarea.form-control {
     overflow-y: auto;
     z-index: 9999; // Much higher than modal z-index (1055)
     min-width: 200px;
-    
+
     // Ensure proper scrolling behavior
     overscroll-behavior: contain;
-    
+
     // Dropdown headers (category labels)
     .dropdown-header {
       font-weight: 600;
@@ -504,7 +505,7 @@ textarea.form-control {
       padding: 0.5rem 1rem 0.25rem;
       background-color: transparent;
     }
-    
+
     // Dropdown items (now buttons)
     .dropdown-item {
       width: 100%;
@@ -519,36 +520,36 @@ textarea.form-control {
       text-overflow: ellipsis;
       transition: all 0.15s ease;
       cursor: pointer;
-      
+
       &:hover {
         background-color: var(--theme-hover-bg);
         color: var(--theme-text);
       }
-      
+
       &:active,
       &.active {
         background-color: var(--theme-primary);
         color: white;
       }
-      
+
       &:focus {
         outline: none;
         background-color: var(--theme-hover-bg);
         color: var(--theme-text);
       }
-      
+
       // Special styling for "Custom Type..." option
       &.text-primary {
         color: var(--theme-primary) !important;
         font-weight: 500;
-        
+
         &:hover {
           background-color: var(--theme-primary);
           color: white !important;
         }
       }
     }
-    
+
     // Dropdown dividers
     .dropdown-divider {
       height: 1px;
@@ -556,8 +557,68 @@ textarea.form-control {
       background-color: var(--theme-border);
       border: none;
     }
+
+    // Hierarchical item group
+    .type-selector-item-group {
+      position: relative;
+    }
+
+    // Row layout: type button + expand chevron side by side
+    .dropdown-item-row {
+      display: flex;
+      align-items: center;
+
+      .dropdown-item {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    // Expand/collapse chevron for sub-types
+    .type-selector-expand-btn {
+      background: transparent;
+      border: none;
+      color: var(--theme-muted-text);
+      padding: 0.375rem 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+
+      svg {
+        transition: transform 0.2s ease;
+      }
+
+      &.expanded svg {
+        transform: rotate(90deg);
+      }
+
+      &:hover {
+        color: var(--theme-primary);
+        background-color: var(--theme-hover-bg);
+      }
+    }
+
+    // Sub-type items container (indented)
+    .type-selector-subtypes {
+      .subtype-item {
+        padding-left: 2rem;
+        font-size: 0.8125rem;
+        color: var(--theme-muted-text);
+
+        &:hover {
+          color: var(--theme-text);
+        }
+
+        &.active {
+          color: white;
+        }
+      }
+    }
   }
-  
+
   // Editing mode styles - now integrated within the input container
   &.type-selector-editing {
     .type-selector-edit-field {
@@ -570,17 +631,17 @@ textarea.form-control {
       margin: 0 0.25rem;
       outline: none;
       padding: 0; // Remove any default input padding
-      
+
       &::placeholder {
         color: var(--theme-muted-text);
         opacity: 0.7;
       }
-      
+
       &:focus {
         outline: none;
       }
     }
-    
+
     // Save and Cancel buttons - ensure visibility
     .type-selector-save-icon,
     .type-selector-cancel-icon {
@@ -591,13 +652,13 @@ textarea.form-control {
       background: transparent;
       border: 1px solid transparent;
       color: var(--theme-muted-text);
-      
+
       &:hover {
         background-color: var(--theme-hover-bg);
         color: var(--theme-primary);
         border-color: var(--theme-border);
       }
-      
+
       &:focus {
         outline: none;
         background-color: var(--theme-hover-bg);
@@ -634,24 +695,24 @@ body.theme-dark {
   border: 1px solid var(--theme-input-border) !important;
   color: var(--theme-text) !important;
   transition: border-color 0.15s ease-in-out !important;
-  
+
   // Match Form.Select padding and sizing
   padding: 0.375rem 0.75rem !important;
   border-radius: 0.375rem !important;
-  
+
   // Small size variant
   &.btn-sm {
     padding: 0.25rem 0.5rem !important;
     border-radius: 0.25rem !important;
   }
-  
+
   // Hover state to match Form.Select
   &:hover:not(:focus):not(:disabled) {
     border-color: var(--theme-input-focus-border) !important;
     background-color: var(--theme-input-bg) !important;
     color: var(--theme-text) !important;
   }
-  
+
   // Focus state to match Form.Select
   &:focus {
     background-color: var(--theme-input-bg) !important;
@@ -660,7 +721,7 @@ body.theme-dark {
     box-shadow: 0 0 0 0.2rem rgba(var(--theme-primary-rgb), 0.25) !important;
     outline: none !important;
   }
-  
+
   // Active state
   &:active,
   &.active {
@@ -669,7 +730,7 @@ body.theme-dark {
     color: var(--theme-text) !important;
     box-shadow: 0 0 0 0.2rem rgba(var(--theme-primary-rgb), 0.25) !important;
   }
-  
+
   // Disabled state
   &:disabled {
     background-color: var(--theme-table-header-bg) !important;
@@ -678,7 +739,7 @@ body.theme-dark {
     opacity: 0.8 !important;
     cursor: not-allowed !important;
   }
-  
+
   // Text content styling
   .text-truncate {
     color: inherit !important;
@@ -689,13 +750,13 @@ body.theme-dark {
     font-style: italic;
     opacity: 0.8;
   }
-  
+
   // Icon styling
   svg {
     color: var(--theme-muted-text) !important;
     flex-shrink: 0 !important;
   }
-  
+
   // Check icon when expression exists
   .ms-auto svg {
     color: var(--bs-success, #198754) !important;
