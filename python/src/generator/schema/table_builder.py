@@ -149,41 +149,30 @@ class TableBuilder:
                 length = int(params[0]) if len(params) > 0 else 1
                 return String(length)
         
-        # Basic type mapping
         type_map = {
-            # Legacy mappings
-            'string': String,
-            'int': Integer,
             'pk': Integer,
             'fk': Integer,
-            
-            # Semantic column types (defaults)
-            'entity_id': Integer,            # Foreign key to entity table
-            'event_id': Integer,             # Foreign key to event table
-            'resource_id': Integer,          # Foreign key to resource table
-            'event_type': String,            # Event type identifier
-            
-            # Standard SQL types
+            'entity_id': Integer,
+            'event_id': Integer,
+            'resource_id': Integer,
+            'event_type': String,
+            'resource_type': String,
             'integer': Integer,
             'int': Integer,
             'bigint': Integer,
             'smallint': Integer,
             'tinyint': Integer,
-            
             'decimal': Numeric,
             'numeric': Numeric,
             'float': Float,
             'double': Float,
             'real': Float,
-            
+            'string': String,
             'varchar': String,
             'char': String,
             'text': Text,
-            'string': String,
-            
             'boolean': Boolean,
             'bool': Boolean,
-            
             'datetime': DateTime,
             'timestamp': DateTime,
             'date': Date,

@@ -137,7 +137,7 @@ class ResourceManager:
                 column_names = [col['name'] for col in columns]
                 
                 # Find the resource type column
-                resource_type_column = self._find_resource_type_column(column_names)
+                resource_type_column = self._find_resource_type_column(column_names, resource_table)
                 if not resource_type_column:
                     logger.error(f"Could not find resource type column in table {resource_table}")
                     return
@@ -173,16 +173,13 @@ class ResourceManager:
                         attributes=row_dict
                     )
                     
-                    # Add to the store
                     self.resource_store.put(resource)
                     resource_count += 1
                     resource_types.add(resource.type)
                     
-                    # Store resource for type lookup
                     resource_key = f"{resource_table}_{resource.id}"
                     self.all_resources[resource_key] = resource
                     
-                    # Initialize utilization tracking
                     self.resource_utilization[resource_key] = {
                         'total_busy_time': 0,
                         'allocation_count': 0,
@@ -198,34 +195,37 @@ class ResourceManager:
                 import traceback
                 logger.error(traceback.format_exc())
     
-    def _find_resource_type_column(self, column_names: List[str]) -> Optional[str]:
+    def _find_resource_type_column(self, column_names: List[str], resource_table: str = None) -> Optional[str]:
         """
-        Find the column that represents resource type
+        Find the column that represents resource type by looking up the parsed db_config
+        for a column declared with type='resource_type'.
         
         Args:
             column_names: List of column names in the resource table
+            resource_table: Name of the resource table (for db_config lookup)
             
         Returns:
             Name of the resource type column or None
         """
-        # Common names for resource type columns
-        common_names = ['role', 'type', 'resource_type', 'category', 'skill', 'position']
+        # Authoritative lookup: find the column declared as type='resource_type' in db_config
+        if self.db_config and resource_table:
+            for entity in self.db_config.entities:
+                if entity.name == resource_table:
+                    for attr in entity.attributes:
+                        if attr.type == 'resource_type' and attr.name in column_names:
+                            logger.debug(f"Found resource type column '{attr.name}' from db_config (type=resource_type)")
+                            return attr.name
+            
+            logger.warning(f"No column with type='resource_type' found in db_config for table '{resource_table}'")
+            return None
         
-        # First, look for exact matches
-        for name in common_names:
-            if name in column_names:
-                return name
+        # Legacy fallback: no db_config available, check if column named 'resource_type' exists
+        if 'resource_type' in column_names:
+            logger.warning("No db_config available, falling back to column named 'resource_type'")
+            return 'resource_type'
         
-        # Then look for columns containing these words
-        for col in column_names:
-            col_lower = col.lower()
-            for name in common_names:
-                if name in col_lower:
-                    return col
-        
-        # Default fallback
-        logger.warning("Could not find resource type column, using 'role' as default")
-        return 'role' if 'role' in column_names else None
+        logger.error("Could not find resource type column: no db_config and no 'resource_type' column")
+        return None
     
     def allocate_resources(self, event_id: int, requirements: List[Dict[str, Any]], event_flow: str = None,
                           entity_id: int = None, entity_table: str = None, entity_attributes: Dict[str, Any] = None,
@@ -367,12 +367,10 @@ class ResourceManager:
                 util['total_busy_time'] += busy_duration
                 util['last_released'] = release_time
             
-            # Return resource to the store
             self.resource_store.put(resource)
             
             logger.debug(f"Released resource {resource_key} from event {event_id}")
         
-        # Record release in history
         self.allocation_history.append({
             'event_id': event_id,
             'timestamp': release_time,
@@ -380,7 +378,6 @@ class ResourceManager:
             'action': 'release'
         })
         
-        # Remove from current allocations
         del self.event_allocations[allocation_key]
         
         logger.debug(f"Released {len(resources)} resources from event {event_id}")
@@ -395,7 +392,7 @@ class ResourceManager:
         Returns:
             List of available resources
         """
-        # Note: This is a snapshot and may change immediately after calling
+        # Note: this is a snapshot and may change immediately after calling
         available = list(self.resource_store.items)
         
         if resource_type:
@@ -542,7 +539,6 @@ class ResourceManager:
                 util['total_busy_time'] += busy_duration
                 util['last_released'] = release_time
             
-            # Return resource to the store
             self.resource_store.put(resource)
             logger.debug(f"Released group resource {resource_key} for entity {entity_id}")
         
@@ -554,6 +550,5 @@ class ResourceManager:
             'action': 'release_group'
         })
         
-        # Remove from group allocations
         del self.group_allocations[group_key]
         logger.debug(f"Released {len(resources)} group resources for entity {entity_id}, group {group_id}")

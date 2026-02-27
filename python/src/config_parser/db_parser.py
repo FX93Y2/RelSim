@@ -83,11 +83,19 @@ VALID_COLUMN_TYPES = {
     'event_type',         # Event type identifier
     'resource_type',      # Resource type identifier (for resource tables)
     
-    # Standard data types
-    'integer', 'int',
-    'decimal', 'float', 'number',
-    'string', 'text', 'varchar',
-    'datetime', 'timestamp', 'date',
+    # Integer types
+    'integer', 'int', 'bigint', 'smallint', 'tinyint',
+    
+    # Decimal / floating-point types
+    'decimal', 'numeric', 'float', 'double', 'real',
+    
+    # String types
+    'string', 'text', 'varchar', 'char',
+    
+    # Temporal types
+    'datetime', 'timestamp', 'date', 'time',
+    
+    # Boolean types
     'boolean', 'bool',
     
     # Legacy types (for backward compatibility during migration)
@@ -179,10 +187,10 @@ def parse_db_config(file_path: Union[str, Path]) -> DatabaseConfig:
                     type=gen_dict['type'],
                     method=gen_dict.get('method'),
                     template=gen_dict.get('template'),
-                    formula=gen_dict.get('formula'),  # Support for formula field
-                    expression=gen_dict.get('expression'),  # Support for expression field
+                    formula=gen_dict.get('formula'),
+                    expression=gen_dict.get('expression'),
                     values=gen_dict.get('values'),
-                    subtype=gen_dict.get('subtype')  # Support for foreign_key generator subtype
+                    subtype=gen_dict.get('subtype')
                 )
             
             relationship = None
@@ -205,7 +213,7 @@ def parse_db_config(file_path: Union[str, Path]) -> DatabaseConfig:
             name=entity_dict['name'],
             attributes=attributes,
             rows=entity_dict.get('rows', 0),
-            type=entity_dict.get('type')  # Parse the type field
+            type=entity_dict.get('type')
         )
         
         # Validate entity configuration

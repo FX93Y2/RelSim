@@ -1,6 +1,80 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Form, Dropdown, Button } from 'react-bootstrap';
-import { FiEdit3, FiChevronDown, FiCheck, FiX } from 'react-icons/fi';
+import { Form } from 'react-bootstrap';
+import { FiEdit3, FiChevronDown, FiCheck, FiX, FiChevronRight } from 'react-icons/fi';
+
+// Unified type definitions with optional subtypes
+const typeCategories = {
+  'Numeric': {
+    integer: {
+      display: 'Integer', template: 'integer', subtypes: {
+        int: { display: 'INT', template: 'int' },
+        bigint: { display: 'BIGINT', template: 'bigint' },
+        smallint: { display: 'SMALLINT', template: 'smallint' },
+        tinyint: { display: 'TINYINT', template: 'tinyint' },
+      }
+    },
+    decimal: {
+      display: 'Decimal', template: 'decimal(10,2)', subtypes: {
+        numeric: { display: 'NUMERIC', template: 'numeric(10,2)' },
+      }
+    },
+    float: {
+      display: 'Float', template: 'float', subtypes: {
+        double: { display: 'DOUBLE', template: 'double' },
+        real: { display: 'REAL', template: 'real' },
+      }
+    },
+    boolean: {
+      display: 'Boolean', template: 'boolean', subtypes: {
+        bool: { display: 'BOOL', template: 'bool' },
+      }
+    },
+  },
+  'String': {
+    string: {
+      display: 'String', template: 'string', subtypes: {
+        varchar: { display: 'VARCHAR', template: 'varchar(255)' },
+        char: { display: 'CHAR', template: 'char(1)' },
+      }
+    },
+    text: { display: 'Text', template: 'text' },
+  },
+  'Temporal': {
+    datetime: {
+      display: 'DateTime', template: 'datetime', subtypes: {
+        timestamp: { display: 'TIMESTAMP', template: 'timestamp' },
+      }
+    },
+    date: { display: 'Date', template: 'date' },
+    time: { display: 'Time', template: 'time' },
+  },
+  'System': {
+    pk: { display: 'Primary Key', template: 'pk' },
+    fk: { display: 'Foreign Key', template: 'fk' },
+    entity_id: { display: 'Entity ID (FK)', template: 'entity_id' },
+    resource_id: { display: 'Resource ID (FK)', template: 'resource_id' },
+    event_type: { display: 'Event Type', template: 'event_type' },
+    resource_type: { display: 'Resource Type', template: 'resource_type' },
+  }
+};
+
+// Build flat lookup of all types (including subtypes) for display resolution
+const buildAllTypes = () => {
+  const all = {};
+  Object.values(typeCategories).forEach(category => {
+    Object.entries(category).forEach(([key, info]) => {
+      all[key] = info;
+      if (info.subtypes) {
+        Object.entries(info.subtypes).forEach(([subKey, subInfo]) => {
+          all[subKey] = subInfo;
+        });
+      }
+    });
+  });
+  return all;
+};
+
+const allTypes = buildAllTypes();
 
 const TypeSelector = ({
   value = 'string',
@@ -13,46 +87,15 @@ const TypeSelector = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [expandedParent, setExpandedParent] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Comprehensive type definitions
-  const typeCategories = {
-    'Basic Types': {
-      string: { display: 'String', template: 'string' },
-      integer: { display: 'Integer', template: 'integer' },
-      float: { display: 'Float', template: 'float' },
-      boolean: { display: 'Boolean', template: 'boolean' },
-      date: { display: 'Date', template: 'date' },
-      datetime: { display: 'DateTime', template: 'datetime' },
-      text: { display: 'Text', template: 'text' }
-    },
-    'Parameterized Types': {
-      decimal: { display: 'Decimal', template: 'decimal(10,2)' },
-      numeric: { display: 'Numeric', template: 'numeric(10,2)' },
-      varchar: { display: 'Varchar', template: 'varchar(255)' },
-      char: { display: 'Char', template: 'char(1)' }
-    },
-    'System Types': {
-      pk: { display: 'Primary Key', template: 'pk' },
-      fk: { display: 'Foreign Key', template: 'fk' },
-      entity_id: { display: 'Entity ID (FK)', template: 'entity_id' },
-      resource_id: { display: 'Resource ID (FK)', template: 'resource_id' },
-      event_type: { display: 'Event Type', template: 'event_type' },
-      resource_type: { display: 'Resource Type', template: 'resource_type' }
-    }
-  };
-
-  // Get all types as flat list for quick access
-  const allTypes = Object.values(typeCategories).reduce((acc, category) => ({ ...acc, ...category }), {});
-
-  // Check if the current value is a parameterized type
   const isParameterizedValue = (typeValue) => {
     return typeValue && typeValue.includes('(') && typeValue.includes(')');
   };
 
-  // Get base type from parameterized type (e.g., 'decimal(10,2)' -> 'decimal')
   const getBaseType = (typeValue) => {
     if (isParameterizedValue(typeValue)) {
       return typeValue.split('(')[0];
@@ -60,35 +103,28 @@ const TypeSelector = ({
     return typeValue;
   };
 
-  // Update edit value when prop changes
   useEffect(() => {
     setEditValue(value);
   }, [value]);
 
-  // Calculate dropdown position for fixed positioning
   const calculateDropdownPosition = () => {
     if (dropdownRef.current) {
       const rect = dropdownRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + window.scrollY + 2,
         left: rect.left + window.scrollX,
-        width: rect.width
+        width: Math.max(rect.width, 200)
       });
     }
   };
 
-  // Handle direct type selection from dropdown
-  const handleTypeSelect = (typeKey) => {
-    const typeInfo = allTypes[typeKey];
-    if (!typeInfo) return;
-
+  const handleTypeSelect = (typeKey, typeInfo) => {
     setDropdownOpen(false);
+    setExpandedParent(null);
 
-    // For parameterized types, start editing mode
     if (isParameterizedValue(typeInfo.template)) {
       setEditValue(typeInfo.template);
       setIsEditing(true);
-      // Focus input after state updates
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
@@ -96,12 +132,15 @@ const TypeSelector = ({
         }
       }, 0);
     } else {
-      // For simple types, apply directly
       onChange(typeInfo.template);
     }
   };
 
-  // Handle edit button click
+  const handleToggleExpand = (e, typeKey) => {
+    e.stopPropagation();
+    setExpandedParent(prev => prev === typeKey ? null : typeKey);
+  };
+
   const handleEditClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -115,24 +154,20 @@ const TypeSelector = ({
     }, 0);
   };
 
-  // Handle text input change
   const handleInputChange = (e) => {
     setEditValue(e.target.value);
   };
 
-  // Handle save edit
   const handleSaveEdit = () => {
     onChange(editValue);
     setIsEditing(false);
   };
 
-  // Handle cancel edit
   const handleCancelEdit = () => {
     setEditValue(value);
     setIsEditing(false);
   };
 
-  // Handle key events in edit mode
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -143,31 +178,39 @@ const TypeSelector = ({
     }
   };
 
-  // Get display text for current value
   const getDisplayText = () => {
     if (!value) return placeholder;
 
-    // Check if it matches a known template exactly
     for (const [key, typeInfo] of Object.entries(allTypes)) {
       if (typeInfo.template === value) {
         return typeInfo.display;
       }
     }
 
-    // For custom parameterized types, show the value as-is
     if (isParameterizedValue(value)) {
       return value;
     }
 
-    // For unknown types, show the value
     return value;
   };
 
-  // Close dropdown when clicking outside
+  // Check if a value matches a type or any of its subtypes
+  const isActiveType = (typeKey, typeInfo) => {
+    const baseVal = getBaseType(value);
+    if (baseVal === typeKey) return true;
+    if (typeInfo.subtypes) {
+      return Object.keys(typeInfo.subtypes).includes(baseVal);
+    }
+    return false;
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        const menu = document.querySelector('.type-selector-menu');
+        if (menu && menu.contains(event.target)) return;
         setDropdownOpen(false);
+        setExpandedParent(null);
       }
     };
 
@@ -189,12 +232,10 @@ const TypeSelector = ({
     );
   }
 
-  // Inline editing mode with integrated design
   if (isEditing) {
     return (
       <div className={`type-selector type-selector-editing ${className}`}>
         <div className={`type-selector-input ${size === 'sm' ? 'type-selector-input-sm' : ''}`}>
-          {/* Input field taking most space */}
           <input
             ref={inputRef}
             type="text"
@@ -204,8 +245,6 @@ const TypeSelector = ({
             className="type-selector-edit-field"
             placeholder="Enter type (e.g., decimal(10,2))"
           />
-
-          {/* Save button */}
           <button
             type="button"
             className="type-selector-icon-btn type-selector-save-icon"
@@ -214,8 +253,6 @@ const TypeSelector = ({
           >
             <FiCheck size={12} />
           </button>
-
-          {/* Cancel button */}
           <button
             type="button"
             className="type-selector-icon-btn type-selector-cancel-icon"
@@ -229,11 +266,9 @@ const TypeSelector = ({
     );
   }
 
-  // Display mode with integrated design
   return (
     <div className={`type-selector ${className}`} ref={dropdownRef}>
       <div className={`type-selector-input ${size === 'sm' ? 'type-selector-input-sm' : ''}`}>
-        {/* Edit icon button */}
         <button
           type="button"
           className="type-selector-icon-btn type-selector-edit-icon"
@@ -243,10 +278,8 @@ const TypeSelector = ({
           <FiEdit3 size={10} />
         </button>
 
-        {/* Type display text */}
         <span className="type-selector-value">{getDisplayText()}</span>
 
-        {/* Dropdown toggle icon */}
         <button
           type="button"
           className="type-selector-icon-btn type-selector-dropdown-icon"
@@ -255,6 +288,7 @@ const TypeSelector = ({
               calculateDropdownPosition();
             }
             setDropdownOpen(!dropdownOpen);
+            if (dropdownOpen) setExpandedParent(null);
           }}
           title="Select from templates"
         >
@@ -265,7 +299,6 @@ const TypeSelector = ({
         </button>
       </div>
 
-      {/* Dropdown menu (positioned with fixed positioning to escape modal) */}
       {dropdownOpen && (
         <div
           className="type-selector-menu"
@@ -275,25 +308,58 @@ const TypeSelector = ({
             width: `${dropdownPosition.width}px`
           }}
         >
-          {Object.entries(typeCategories).map(([categoryName, types]) => (
+          {Object.entries(typeCategories).map(([categoryName, types], catIndex) => (
             <React.Fragment key={categoryName}>
               <div className="dropdown-header">{categoryName}</div>
               {Object.entries(types).map(([typeKey, typeInfo]) => (
-                <button
-                  key={typeKey}
-                  type="button"
-                  className={`dropdown-item ${getBaseType(value) === typeKey ? 'active' : ''}`}
-                  onClick={() => handleTypeSelect(typeKey)}
-                >
-                  {typeInfo.display}
-                  {isParameterizedValue(typeInfo.template) && (
-                    <span className="text-muted ms-1">
-                      ({typeInfo.template.split('(')[1].replace(')', '')})
-                    </span>
+                <div key={typeKey} className="type-selector-item-group">
+                  <div className="dropdown-item-row">
+                    <button
+                      type="button"
+                      className={`dropdown-item ${isActiveType(typeKey, typeInfo) ? 'active' : ''}`}
+                      onClick={() => handleTypeSelect(typeKey, typeInfo)}
+                    >
+                      {typeInfo.display}
+                      {isParameterizedValue(typeInfo.template) && (
+                        <span className="text-muted ms-1">
+                          ({typeInfo.template.split('(')[1].replace(')', '')})
+                        </span>
+                      )}
+                    </button>
+                    {typeInfo.subtypes && (
+                      <button
+                        type="button"
+                        className={`type-selector-expand-btn ${expandedParent === typeKey ? 'expanded' : ''}`}
+                        onClick={(e) => handleToggleExpand(e, typeKey)}
+                        title="Show variants"
+                      >
+                        <FiChevronRight size={10} />
+                      </button>
+                    )}
+                  </div>
+
+                  {typeInfo.subtypes && expandedParent === typeKey && (
+                    <div className="type-selector-subtypes">
+                      {Object.entries(typeInfo.subtypes).map(([subKey, subInfo]) => (
+                        <button
+                          key={subKey}
+                          type="button"
+                          className={`dropdown-item subtype-item ${getBaseType(value) === subKey ? 'active' : ''}`}
+                          onClick={() => handleTypeSelect(subKey, subInfo)}
+                        >
+                          {subInfo.display}
+                          {isParameterizedValue(subInfo.template) && (
+                            <span className="text-muted ms-1">
+                              ({subInfo.template.split('(')[1].replace(')', '')})
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </button>
+                </div>
               ))}
-              {categoryName !== 'System Types' && <div className="dropdown-divider" />}
+              {catIndex < Object.keys(typeCategories).length - 1 && <div className="dropdown-divider" />}
             </React.Fragment>
           ))}
 

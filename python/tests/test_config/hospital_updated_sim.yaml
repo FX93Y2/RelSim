@@ -12,8 +12,7 @@ simulation:
         Pathologist: 1
   queues: &a1
     - name: Initial Consultation Queue
-      type: HighAttribute
-      attribute: prioirty
+      type: FIFO
 event_simulation:
   event_flows:
     - flow_id: flow_1_Patient Arrival
@@ -62,19 +61,19 @@ event_simulation:
                 conditions:
                   - if: Probability
                     is: ==
-                    value: 0.3333333333333333
+                    value: 0.5
               - outcome_id: outcome_2
                 next_step_id: Tests
                 conditions:
                   - if: Probability
                     is: ==
-                    value: 0.3333333333333333
+                    value: 0.4
               - outcome_id: outcome_3
                 next_step_id: Treatment
                 conditions:
                   - if: Probability
                     is: ==
-                    value: 0.3333333333333333
+                    value: 0.1
           group_id: group_1
         - step_id: Discharge_1
           step_type: event
@@ -89,7 +88,7 @@ event_simulation:
               - resource_table: Doctor
                 value: Nurse Practitioner
                 count: 1
-            bridge_table: MedicationOrder
+            bridge_table: ClinicalEvent
           next_steps:
             - assign discharge_1
           group_id: group_1
@@ -101,9 +100,9 @@ event_simulation:
                 attribute_name: status
                 value: discharged
           next_steps:
-            - Medication Oder
+            - Medication Order
           group_id: group_1
-        - step_id: Medication Oder
+        - step_id: Medication Order
           step_type: event
           event_config:
             duration:
@@ -132,13 +131,13 @@ event_simulation:
               - assignment_type: sql
                 expression: >
                   UPDATE Invoice SET 
-                    patient_id = '{Entity.PatientID}',
+                    patient_id = Entity.PatientID,
                     TotalAmount = (
                         SELECT COALESCE(SUM(CAST(REPLACE(M.unit_price, '$', '') AS REAL)), 0)
                         FROM MedicationOrder MO
                         JOIN ClinicalEvent CE ON MO.clinicalevent_id = CE.id
                         JOIN Medication M ON MO.medication_id = M.MedicationID
-                        WHERE CE.patient_id = '{Entity.PatientID}'
+                        WHERE CE.patient_id = Entity.PatientID
                     )
                   WHERE InvoiceID = (SELECT InvoiceID FROM Invoice ORDER BY
                   created_at DESC LIMIT 1)
@@ -155,7 +154,7 @@ event_simulation:
             resource_requirements:
               - resource_table: Doctor
                 value: Resident Physician
-                count: 1
+                count: NORM(1,1)
               - resource_table: Doctor
                 value: Attending Physician
                 count: 1
@@ -202,7 +201,7 @@ event_simulation:
                 conditions:
                   - if: Probability
                     is: ==
-                    value: 0.19999999999999996
+                    value: 0.2
           group_id: group_1
         - step_id: Discharge_2
           step_type: event
@@ -229,7 +228,7 @@ event_simulation:
                 attribute_name: status
                 value: discharged
           next_steps:
-            - Medication Oder
+            - Medication Order
           group_id: group_1
         - step_id: Admitting
           step_type: event

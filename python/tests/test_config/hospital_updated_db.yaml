@@ -18,7 +18,7 @@ entities:
         generator:
           type: faker
           method: "date.birthdate({ mode: 'age', min: 30, max: 65 })"
-      - name: FirasName
+      - name: FirstName
         type: string
         generator:
           type: faker
@@ -69,7 +69,7 @@ entities:
         generator:
           type: faker
           method: phone.number()
-      - name: resource_type
+      - name: title
         type: resource_type
         generator:
           type: distribution
@@ -114,8 +114,6 @@ entities:
           type: foreign_key
           subtype: many_to_one
         ref: Patient.PatientID
-      - name: created_at
-        type: datetime
       - name: TotalAmount
         type: decimal(10,2)
   - name: ClinicalEvent
@@ -154,11 +152,11 @@ entities:
           type: template
           template: MED{id}
       - name: unit_price
-        type: string
+        type: decimal(10,2)
         generator:
           type: faker
-          method: "commerce.price({ min: 100, max: 200, dec: 0, symbol: '$' })"
-      - name: categroy
+          method: "commerce.price({ min: 100, max: 200, dec: 2 })"
+      - name: category
         type: string
         generator:
           type: distribution
