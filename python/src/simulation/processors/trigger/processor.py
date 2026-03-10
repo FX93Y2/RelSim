@@ -154,6 +154,27 @@ class TriggerStepProcessor(StepProcessor):
                 self.logger.error(f"Could not determine FK column for trigger step {step.step_id}")
                 return None
 
+            # Resolve the FK value: if the FK column references a different table
+            # than the current entity, look up the value from the current entity's DB row
+            fk_value = entity_id
+            if target_entity and fk_column:
+                # Find what table the FK column references
+                fk_attr = next((a for a in target_entity.attributes if a.name == fk_column), None)
+                if fk_attr and fk_attr.ref:
+                    ref_table = fk_attr.ref.split('.')[0]
+                    if ref_table != entity_table:
+                        # The FK references a DIFFERENT table (e.g., ProjectID references Project,
+                        # but current entity is Deliverable). Look up the value from the entity.
+                        resolved_val = self._resolve_fk_from_entity(
+                            entity_table, entity_id, fk_column
+                        )
+                        if resolved_val is not None:
+                            fk_value = resolved_val
+                            self.logger.debug(
+                                f"Cross-entity FK: resolved {fk_column}={fk_value} "
+                                f"from {entity_table}[{entity_id}]"
+                            )
+
             # Resolve timestamp columns and values
             timestamp_column, sim_time_column, event_timestamp, sim_minutes, ts_missing_attr = self._resolve_timestamp_fields(
                 trigger_config, target_entity, step.step_id
@@ -163,7 +184,7 @@ class TriggerStepProcessor(StepProcessor):
             generated_ids = self._generate_records(
                 target_table=trigger_config.target_table,
                 count=count,
-                entity_id=entity_id,
+                entity_id=fk_value,
                 fk_column=fk_column,
                 timestamp_column=timestamp_column,
                 sim_time_column=sim_time_column,
@@ -276,6 +297,57 @@ class TriggerStepProcessor(StepProcessor):
             f"No FK column found for {trigger_config.target_table} -> {entity_table}. "
             "Please specify fk_column explicitly."
         )
+        return None
+
+    def _resolve_fk_from_entity(self, entity_table: str, entity_id: int, 
+                                 fk_column: str) -> Optional[int]:
+        """
+        Look up a FK column value from the current entity's DB row.
+        
+        Used when the trigger target's FK references a different table than
+        the current entity. For example, trigger_expenses needs ProjectID,
+        but the current entity is a Deliverable — read Deliverable.ProjectID.
+        
+        Args:
+            entity_table: Current entity's table name
+            entity_id: Current entity's ID
+            fk_column: Name of the FK column to read
+            
+        Returns:
+            The FK value, or None if not found
+        """
+        try:
+            # Check if the entity table has this FK column
+            entity_config = self._get_target_entity(entity_table)
+            if not entity_config:
+                return None
+            
+            # Verify the FK column exists on the entity table
+            has_column = any(a.name == fk_column for a in entity_config.attributes)
+            if not has_column:
+                return None
+            
+            # Look up PK column for the entity table
+            pk_column = None
+            for attr in entity_config.attributes:
+                if attr.type == 'pk':
+                    pk_column = attr.name
+                    break
+            if not pk_column:
+                return None
+            
+            # Read the FK value from the database
+            with self.engine.connect() as conn:
+                result = conn.execute(
+                    text(f'SELECT [{fk_column}] FROM [{entity_table}] WHERE [{pk_column}] = :eid'),
+                    {"eid": entity_id}
+                )
+                row = result.fetchone()
+                if row and row[0] is not None:
+                    return row[0]
+        except Exception as e:
+            self.logger.error(f"Error resolving FK {fk_column} from {entity_table}[{entity_id}]: {e}")
+        
         return None
 
     def _resolve_timestamp_fields(

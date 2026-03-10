@@ -1,0 +1,6 @@
+BusinessUnitID,BusinessUnit,CurrentMonthRevenue,YTDRevenue,ProjectCount,TotalHoursYTD
+1002,Healthcare,0.0,6635343.38,29,31876.42
+1005,Government,0.0,6488138.62,29,29959.06
+1001,Retail,0.0,6125721.71,32,30825.44
+1004,Energy,0.0,4162597.8,21,22520.76
+1003,Media & Entertainment,0.0,2895016.36,15,14643.95

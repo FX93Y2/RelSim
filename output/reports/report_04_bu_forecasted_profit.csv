@@ -1,0 +1,6 @@
+BusinessUnitID,BusinessUnit,ForecastedAnnualRevenue,ForecastedAnnualLaborCost,ForecastedAnnualExpenses,ForecastedAnnualProfit
+1005,Government,6488138.62,2995906.0,1865237.34,1626995.28
+1002,Healthcare,6635343.38,3187642.0,2071874.25,1375827.13
+1004,Energy,4162597.8,2252076.0,1381081.92,529439.88
+1001,Retail,6125721.71,3082544.0,2548088.85,495088.86
+1003,Media & Entertainment,2895016.36,1464395.0,1005683.52,424937.84

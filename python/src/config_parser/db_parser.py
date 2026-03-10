@@ -19,6 +19,7 @@ class Generator:
     expression: Optional[str] = None     # Expression string for formula type generators
     values: Optional[List] = None
     subtype: Optional[str] = None  # Added for foreign_key generator support
+    id_offset: Optional[int] = None      # Offset for template {id} variable (e.g., 1000 → IDs start at 1001)
 
 @dataclass
 class Relationship:
@@ -105,7 +106,7 @@ VALID_COLUMN_TYPES = {
 # Required column types by table type
 REQUIRED_TYPES_BY_TABLE = {
     'entity': ['pk'],
-    'bridge': ['pk'],
+    'bridge': [],  # Bridge tables may use composite keys or no dedicated PK
     'event': ['pk', 'entity_id', 'event_type'],
     'resource': ['pk'],
 }
@@ -132,13 +133,20 @@ def validate_entity_config(entity: Entity) -> None:
             )
         
     
-    # Check for required primary key
+    # Check for required primary key (bridge tables can optionally have no PK)
     pk_attrs = [attr for attr in entity.attributes if attr.type == 'pk']
-    if len(pk_attrs) != 1:
-        raise ValueError(
-            f"Entity '{entity.name}' must have exactly one column with type='pk', "
-            f"found {len(pk_attrs)}"
-        )
+    if entity.type == 'bridge':
+        if len(pk_attrs) > 1:
+            raise ValueError(
+                f"Entity '{entity.name}' (bridge) has more than one column with type='pk', "
+                f"found {len(pk_attrs)}"
+            )
+    else:
+        if len(pk_attrs) != 1:
+            raise ValueError(
+                f"Entity '{entity.name}' must have exactly one column with type='pk', "
+                f"found {len(pk_attrs)}"
+            )
     
     # Check table-specific requirements
     if entity.type in REQUIRED_TYPES_BY_TABLE:
@@ -190,7 +198,8 @@ def parse_db_config(file_path: Union[str, Path]) -> DatabaseConfig:
                     formula=gen_dict.get('formula'),
                     expression=gen_dict.get('expression'),
                     values=gen_dict.get('values'),
-                    subtype=gen_dict.get('subtype')
+                    subtype=gen_dict.get('subtype'),
+                    id_offset=gen_dict.get('id_offset')
                 )
             
             relationship = None
@@ -265,7 +274,8 @@ def parse_db_config_from_string(content: str) -> DatabaseConfig:
                     formula=gen_dict.get('formula'),
                     expression=gen_dict.get('expression'), 
                     values=gen_dict.get('values'),
-                    subtype=gen_dict.get('subtype')
+                    subtype=gen_dict.get('subtype'),
+                    id_offset=gen_dict.get('id_offset')  # Offset for template {id} variable
                 )
             
             relationship = None

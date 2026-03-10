@@ -66,7 +66,8 @@ def generate_attribute_value(attr_config: Dict[str, Any], row_index: int) -> Any
     elif generator_type == 'template':
         template = generator_config.get('template') or "{id}"
         # Use row_index + 1 for 1-based ID in template context
-        context = {'id': row_index + 1} 
+        id_offset = generator_config.get('id_offset') or 0
+        context = {'id': row_index + 1 + id_offset} 
         try:
             return generate_from_template(template, context)
         except Exception as e:
@@ -87,6 +88,15 @@ def generate_attribute_value(attr_config: Dict[str, Any], row_index: int) -> Any
         
         logger.error(f"Distribution generator for {attr_name} missing 'formula' field")
         raise ValueError(f"Invalid distribution generator config for {attr_name}: formula field is required")
+
+    # Ordered list generator - assigns values by row index (deterministic, one-of-each)
+    elif generator_type == 'ordered_list':
+        values = generator_config.get('values', [])
+        if not values:
+            logger.warning(f"Ordered list generator for {attr_name} has no values")
+            return f"OrderedList_{attr_name}_{row_index}"
+        # Cycle through values if there are more rows than values
+        return values[row_index % len(values)]
 
     # Simulation event type - handled by simulation system
     elif generator_type == 'simulation_event':

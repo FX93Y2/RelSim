@@ -4,7 +4,7 @@
  */
 
 // API Configuration
-const API_BASE_URL = 'http://127.0.0.1:5000/api';
+const API_BASE_URL = 'http://127.0.0.1:5001/api';
 
 // Cache Configuration
 const CACHE_EXPIRY = 10000; // 10 seconds in ms

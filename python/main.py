@@ -49,7 +49,7 @@ config_manager = ConfigManager()
 # All API routes are now handled by the modular routes structure in api/routes/
 # This file now only handles CLI functionality
 
-def run_api(host='127.0.0.1', port=5000):
+def run_api(host='127.0.0.1', port=5001):
     """Run the Flask API server"""
     app.run(host=host, port=port, debug=False)
 
@@ -61,7 +61,7 @@ def main():
     # API server command
     api_parser = subparsers.add_parser('api', help='Start the API server')
     api_parser.add_argument('--host', default='127.0.0.1', help='Host to bind the API server')
-    api_parser.add_argument('--port', type=int, default=5000, help='Port to bind the API server')
+    api_parser.add_argument('--port', type=int, default=5001, help='Port to bind the API server')
     
     # Added for PyInstaller compatibility - will be passed by Electron
     api_parser.add_argument('--output-dir', help='Output directory for files')

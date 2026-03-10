@@ -3,7 +3,6 @@
  */
 
 const { app, ipcMain, shell } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const { getMainWindow } = require('./window');
 
 const RELEASES_URL = 'https://github.com/FX93Y2/RelSim/releases/latest';
@@ -21,6 +20,8 @@ function initAutoUpdater() {
         return;
     }
 
+    // Deferred require to avoid crash in dev mode
+    const { autoUpdater } = require('electron-updater');
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = false;
 

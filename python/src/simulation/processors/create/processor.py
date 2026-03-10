@@ -121,9 +121,24 @@ class CreateStepProcessor(StepProcessor):
             
             initial_data = {}
             if parent_table:
-                # Find FK column in child entity that references the parent table
-                fk_column = self._find_parent_fk_column(config.entity_table, parent_table)
-                initial_data[fk_column] = entity_id
+                if parent_table == config.entity_table:
+                    # Same-table create (e.g., Deliverable creates another Deliverable).
+                    # The new entity should link to the GRANDPARENT (e.g., Project),
+                    # not to the sibling entity that triggered this step.
+                    # Look up the grandparent FK by reading the triggering entity's FK value.
+                    fk_column, fk_value = self._resolve_grandparent_fk(
+                        config.entity_table, entity_id, parent_table
+                    )
+                    if fk_column and fk_value is not None:
+                        initial_data[fk_column] = fk_value
+                        logger.debug(
+                            f"Same-table create: resolved grandparent FK "
+                            f"{fk_column}={fk_value} from entity {entity_id}"
+                        )
+                else:
+                    # Normal parent-child create (e.g., Project creates Deliverable)
+                    fk_column = self._find_parent_fk_column(config.entity_table, parent_table)
+                    initial_data[fk_column] = entity_id
             
             # Create the batch immediately
             self._create_and_route_batch(count, step, flow, config, event_flow, initial_data)
@@ -400,6 +415,90 @@ class CreateStepProcessor(StepProcessor):
         )
     
     
+    def _resolve_grandparent_fk(self, entity_table: str, entity_id: int, 
+                                 parent_table: str) -> tuple:
+        """
+        Resolve the grandparent FK for same-table creates.
+        
+        When a Deliverable entity triggers creation of another Deliverable,
+        we need to find the FK column that links to a DIFFERENT table (e.g., Project)
+        and read its value from the triggering entity.
+        
+        Args:
+            entity_table: The table being created (same as parent_table)
+            entity_id: ID of the triggering (sibling) entity
+            parent_table: The table of the triggering entity (same as entity_table)
+            
+        Returns:
+            Tuple of (fk_column_name, fk_value) or (None, None) if not found
+        """
+        db_config = getattr(self.entity_manager, 'db_config', None)
+        if not db_config:
+            return (None, None)
+        
+        # Find the entity configuration
+        entity_cfg = None
+        for entity in db_config.entities:
+            if entity.name == entity_table:
+                entity_cfg = entity
+                break
+        
+        if not entity_cfg:
+            return (None, None)
+        
+        # Find the first FK column that references a DIFFERENT table
+        fk_column = None
+        for attr in entity_cfg.attributes:
+            if attr.ref:
+                ref_table = attr.ref.split('.')[0]
+                if ref_table != entity_table:
+                    # Found a FK to a different table (e.g., Deliverable.ProjectID → Project)
+                    if (attr.generator and attr.generator.type == "foreign_key") or \
+                       attr.type in ('entity_id', 'fk'):
+                        fk_column = attr.name
+                        break
+        
+        if not fk_column:
+            logger.warning(
+                f"Same-table create: no FK to a different table found in '{entity_table}'. "
+                f"Cannot resolve grandparent FK."
+            )
+            return (None, None)
+        
+        # Read the FK value from the triggering entity
+        process_engine = create_engine(
+            f"sqlite:///{self.entity_manager.db_path}?journal_mode=WAL",
+            poolclass=NullPool,
+            connect_args={"check_same_thread": False}
+        )
+        
+        try:
+            # Find the PK column name
+            pk_column = self.column_resolver.get_primary_key(entity_table)
+            
+            with process_engine.connect() as conn:
+                result = conn.execute(
+                    text(f"SELECT [{fk_column}] FROM [{entity_table}] WHERE [{pk_column}] = :eid"),
+                    {"eid": entity_id}
+                )
+                row = result.fetchone()
+                if row:
+                    fk_value = row[0]
+                    logger.debug(
+                        f"Resolved grandparent FK: {fk_column}={fk_value} "
+                        f"from {entity_table}[{pk_column}={entity_id}]"
+                    )
+                    return (fk_column, fk_value)
+                else:
+                    logger.warning(f"Entity {entity_id} not found in {entity_table}")
+                    return (None, None)
+        except Exception as e:
+            logger.error(f"Error resolving grandparent FK: {e}", exc_info=True)
+            return (None, None)
+        finally:
+            process_engine.dispose()
+
+
     def _find_step_by_id(self, step_id: str, flow: 'EventFlow') -> Optional['Step']:
         """Find a step by its ID within a flow."""
         for step in flow.steps:

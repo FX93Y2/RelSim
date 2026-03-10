@@ -273,10 +273,14 @@ class EventTracker:
                         conn.commit()
                         return
 
-                    bridge_data = {
-                        'start_date': allocation_datetime,
-                        'end_date': release_datetime
-                    }
+                    bridge_data = {}
+                    bridge_col_names = [c.name for c in target_bridge.columns]
+                    
+                    # Only include start_date/end_date if columns exist in bridge table
+                    if 'start_date' in bridge_col_names:
+                        bridge_data['start_date'] = allocation_datetime
+                    if 'end_date' in bridge_col_names:
+                        bridge_data['end_date'] = release_datetime
                     
                     # Add resource FK if present
                     if resource_fk:

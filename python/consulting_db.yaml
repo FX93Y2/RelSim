@@ -1,0 +1,359 @@
+# Consulting Firm Client Engagements Database
+# 13 tables across static (generated once) and dynamic (simulation-populated) categories
+
+entities:
+  # ============================================================
+  # PHASE 1: STATIC TABLES (generated at DB creation time)
+  # ============================================================
+
+  # Table 1: Region (renamed from Location per PPTX v2 Slide 7/8)
+  - name: Region
+    type: entity
+    rows: 30
+    attributes:
+      - name: RegionID
+        type: pk
+      - name: State
+        type: string
+        generator:
+          type: faker
+          method: location.state()
+      - name: City
+        type: string
+        generator:
+          type: faker
+          method: location.city()
+
+  # Table 2: Client
+  - name: Client
+    type: entity
+    rows: 20
+    attributes:
+      - name: ClientID
+        type: pk
+        generator:
+          type: template
+          template: "{id}"
+          id_offset: 999
+      - name: ClientName
+        type: string
+        generator:
+          type: faker
+          method: company.name()
+      - name: RegionID
+        type: fk
+        ref: Region.RegionID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: PhoneNumber
+        type: string
+        generator:
+          type: faker
+          method: phone.number()
+      - name: Email
+        type: string
+        generator:
+          type: faker
+          method: internet.email()
+
+  # Table 3: BusinessUnit (deterministic, 5 fixed rows)
+  - name: Business_Unit
+    type: entity
+    rows: 5
+    attributes:
+      - name: BusinessUnitID
+        type: pk
+        generator:
+          type: template
+          template: "{id}"
+          id_offset: 1000
+      - name: BusinessUnitName
+        type: string
+        generator:
+          type: ordered_list
+          values:
+            - Retail
+            - Healthcare
+            - Media & Entertainment
+            - Energy
+            - Government
+
+  # Table 4: Title (deterministic, 6 fixed rows)
+  - name: Title
+    type: entity
+    rows: 6
+    attributes:
+      - name: TitleID
+        type: pk
+        generator:
+          type: template
+          template: "{id}"
+          id_offset: 100
+      - name: Title
+        type: string
+        generator:
+          type: ordered_list
+          values:
+            - Consultant
+            - Senior Consultant
+            - Manager
+            - Senior Manager
+            - Associate Partner
+            - Partner
+
+  # Table 5: Consultant (resource table for simulation)
+  - name: Consultant
+    type: resource
+    rows: 60
+    attributes:
+      - name: ConsultantID
+        type: pk
+      - name: ConsultantName
+        type: string
+        generator:
+          type: faker
+          method: person.fullName()
+      - name: BusinessUnitID
+        type: fk
+        ref: Business_Unit.BusinessUnitID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: resource_type
+        type: resource_type
+        generator:
+          type: distribution
+          formula: DISC(0.30, Junior, 0.30, Mid, 0.20, Senior, 0.10, Lead, 0.05, Principal, 0.05, Executive)
+
+  # Table 6: Consultant_Title_History (bridge - populated by post-processing script)
+  # Complex promotion-chain logic: 1-3 rows per consultant (PPTX v2 Slide 12-13)
+  - name: Consultant_Title_History
+    type: bridge
+    rows: n/a
+    attributes:
+      - name: ConsultantID
+        type: resource_id
+        ref: Consultant.ConsultantID
+      - name: TitleID
+        type: fk
+        ref: Title.TitleID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: StartDate
+        type: date
+      - name: EndDate
+        type: date
+      - name: Salary
+        type: decimal(12,2)
+
+  # ============================================================
+  # PHASE 2: PROJECT TABLES (Dynamic — populated by simulation)
+  # ============================================================
+
+  # Table 7: Project_Plan (per Slide 8 "Project Plan")
+  - name: Project_Plan
+    type: entity
+    rows: n/a
+    attributes:
+      - name: ProjectID
+        type: pk
+      - name: ClientID
+        type: fk
+        ref: Client.ClientID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: BusinessUnitID
+        type: fk
+        ref: Business_Unit.BusinessUnitID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: ProjectName
+        type: string
+        generator:
+          type: faker
+          method: company.catchPhrase()
+      - name: ProjectType
+        type: string
+        generator:
+          type: distribution
+          formula: DISC(0.5, Fixed-Price, 0.5, Time & Materials)
+      - name: Fixed_Price_Amount
+        type: decimal(12,2)
+        generator:
+          type: distribution
+          formula: UNIF(50000, 500000)
+      - name: PlannedStartDate
+        type: date
+      - name: PlannedEndDate
+        type: date
+      - name: PlannedExpense
+        type: decimal(12,2)
+      - name: EstimatedBudget
+        type: decimal(12,2)
+      - name: PlannedHours
+        type: decimal(10,2)
+      - name: ProjectStatus
+        type: string
+      - name: created_at
+        type: datetime
+
+  # Table 8: ProjectBillingRate (rate fix via post-proc fix_billing_rates.py)
+  - name: Project_Billing_Rate
+    type: bridge
+    rows: n/a
+    attributes:
+      - name: id
+        type: pk
+      - name: ProjectID
+        type: entity_id
+        ref: Project_Plan.ProjectID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: TitleID
+        type: fk
+        ref: Title.TitleID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: BillingRate
+        type: decimal(10,2)
+        generator:
+          type: distribution
+          formula: NORM(275, 50)
+
+  # Table 9: Deliverable
+  - name: Deliverable
+    type: entity
+    rows: n/a
+    attributes:
+      - name: DeliverableID
+        type: pk
+      - name: ProjectID
+        type: entity_id
+        ref: Project_Plan.ProjectID
+        generator:
+          type: foreign_key
+          subtype: one_to_many
+      - name: DeliverableName
+        type: string
+        generator:
+          type: distribution
+          formula: DISC(0.2, Project Plan Development, 0.2, Design, 0.2, Infrastructure Implementation, 0.2, Coding and Unit Test, 0.2, System Test)
+      - name: PlannedStartDate
+        type: date
+      - name: PlannedEndDate
+        type: date
+      - name: ActualStartDate
+        type: date
+      - name: ActualEndDate
+        type: date
+      - name: DeliverableFixedPrice
+        type: decimal(12,2)
+      - name: PlannedExpense
+        type: decimal(12,2)
+      - name: created_at
+        type: datetime
+
+  # Table 10: Deliverable_Title_Plan_Mapping
+  - name: Deliverable_Title_Plan_Mapping
+    type: bridge
+    rows: n/a
+    attributes:
+      - name: DeliverableID
+        type: entity_id
+        ref: Deliverable.DeliverableID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: TitleID
+        type: fk
+        ref: Title.TitleID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: PlannedHours
+        type: decimal(10,2)
+        generator:
+          type: distribution
+          formula: UNIF(30, 120)
+
+  # Table 11: Consultant_Deliverable_Mapping
+  - name: Consultant_Deliverable_Mapping
+    type: bridge
+    rows: n/a
+    attributes:
+      - name: DeliverableID
+        type: entity_id
+        ref: Deliverable.DeliverableID
+      - name: ConsultantID
+        type: resource_id
+        ref: Consultant.ConsultantID
+      - name: Month
+        type: date
+      - name: ActualHours
+        type: decimal(10,2)
+        generator:
+          type: distribution
+          formula: UNIF(20, 160)
+
+  # Table 12: Actual_Project_Expense (per Slide 8: "Actual Project Expense")
+  - name: Actual_Project_Expense
+    type: entity
+    rows: n/a
+    attributes:
+      - name: ExpenseID
+        type: pk
+      - name: DeliverableID
+        type: entity_id
+        ref: Deliverable.DeliverableID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: Date
+        type: date
+      - name: Amount
+        type: decimal(10,2)
+        generator:
+          type: distribution
+          formula: NORM(5000, 2000)
+      - name: Description
+        type: string
+        generator:
+          type: faker
+          method: commerce.productName()
+      - name: Category
+        type: string
+        generator:
+          type: distribution
+          formula: DISC(0.3, Travel, 0.25, Software, 0.2, Equipment, 0.15, Facilities, 0.1, Other)
+      - name: Billable
+        type: string
+        generator:
+          type: distribution
+          formula: DISC(0.7, Billable, 0.3, Non-Billable)
+      - name: created_at
+        type: datetime
+
+  # Table 13: Deliverable_Progress_Month (populated by post-processing script)
+  - name: Deliverable_Progress_Month
+    type: bridge
+    rows: n/a
+    attributes:
+      - name: DeliverableID
+        type: entity_id
+        ref: Deliverable.DeliverableID
+        generator:
+          type: foreign_key
+          subtype: many_to_one
+      - name: Report_Month
+        type: date
+      - name: PercentageComplete
+        type: decimal(5,2)
+        generator:
+          type: distribution
+          formula: UNIF(0, 100)
