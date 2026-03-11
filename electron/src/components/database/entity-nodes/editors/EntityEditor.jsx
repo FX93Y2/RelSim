@@ -8,66 +8,41 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
   const [name, setName] = useState('');
   const [entityType, setEntityType] = useState('');
   const [rows, setRows] = useState('n/a');
+  const [isRowsFocused, setIsRowsFocused] = useState(false);
   const [attributes, setAttributes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [lastEntityName, setLastEntityName] = useState(null);
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
 
-  // Initialize form when entity changes
+  // Initialize and reset form data based on modal visibility or entity selection changes
   useEffect(() => {
-    // Only reset form data when entity actually changes (new entity opened), not during auto-updates
-    const normalizedType = entity?.type === 'event' ? 'entity' : entity?.type;
-    if (entity && (!lastEntityName || entity.name !== lastEntityName)) {
-      setLastEntityName(entity.name);
-      setName(entity.name || '');
-      setEntityType(normalizedType || '');
-      setRows(entity.rows || 'n/a');
-      const attrs = normalizedType === 'entity' && entity.type === 'event'
-        ? (entity.attributes || []).filter(attr => attr.type !== 'event_type')
-        : (entity.attributes || []);
-      setAttributes(attrs);
-      setValidationErrors([]);
-    } else if (!entity && lastEntityName !== null) {
-      // Reset form for new entity only if coming from an existing entity
-      setLastEntityName(null);
-      setName('');
-      setEntityType('');
-      setRows('n/a');
-      setAttributes([{
-        name: 'id',
-        type: 'pk'
-      }]);
-      setValidationErrors([]);
-    }
-  }, [entity, lastEntityName]);
+    // We want to discard unsaved edits and reset to the source 'entity' data
+    // every time the modal is opened, or when the selected entity changes.
+    if (show) {
+      if (entity) {
+        const normalizedType = entity.type === 'event' ? 'entity' : entity.type;
+        setName(entity.name || '');
+        setEntityType(normalizedType || '');
+        setRows(entity.rows === undefined ? 'n/a' : entity.rows);
 
-  // Reset form data only when modal opens, not during editing
-  useEffect(() => {
-    const normalizedType = entity?.type === 'event' ? 'entity' : entity?.type;
-    if (show && entity && (!lastEntityName || entity.name !== lastEntityName)) {
-      // Only reset when opening modal with a different entity
-      setName(entity.name || '');
-      setEntityType(normalizedType || '');
-      setRows(entity.rows || 'n/a');
-      const attrs = normalizedType === 'entity' && entity.type === 'event'
-        ? (entity.attributes || []).filter(attr => attr.type !== 'event_type')
-        : (entity.attributes || []);
-      setAttributes(attrs);
-      setValidationErrors([]);
-    } else if (show && !entity) {
-      // Reset for new entity when modal opens
-      setName('');
-      setEntityType('');
-      setRows('n/a');
-      setAttributes([{
-        name: 'id',
-        type: 'pk'
-      }]);
-      setValidationErrors([]);
+        const attrs = normalizedType === 'entity' && entity.type === 'event'
+          ? (entity.attributes || []).filter(attr => attr.type !== 'event_type')
+          : (entity.attributes || []);
+
+        // Use JSON deep copy to avoid mutating the prop's objects if nested fields change locally
+        setAttributes(JSON.parse(JSON.stringify(attrs)));
+        setValidationErrors([]);
+      } else {
+        // Reset for new entity
+        setName('');
+        setEntityType('');
+        setRows('n/a');
+        setAttributes([{ name: 'id', type: 'pk' }]);
+        setValidationErrors([]);
+      }
     }
-  }, [show, entity, lastEntityName]);
+  }, [show, entity?.name]);
 
   // Validate entity data
   const validateEntity = () => {
@@ -366,17 +341,20 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
                     ) : (
                       <Form.Control
                         type="text"
-                        value={rows}
+                        value={rows === 'n/a' ? '' : rows}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Allow 'n/a' or numbers for default tables
-                          if (value === 'n/a' || value === '') {
-                            handleRowsChange(value === '' ? 'n/a' : value);
-                          } else if (!isNaN(parseInt(value))) {
-                            handleRowsChange(parseInt(value));
+                          if (value === '') {
+                            handleRowsChange('n/a');
+                          } else if (/^\d+$/.test(value)) {
+                            handleRowsChange(parseInt(value, 10));
+                          } else {
+                            handleRowsChange(value);
                           }
                         }}
-                        placeholder="Enter number of rows or 'n/a' for dynamic"
+                        onFocus={() => setIsRowsFocused(true)}
+                        onBlur={() => setIsRowsFocused(false)}
+                        placeholder={isRowsFocused ? "" : "n/a"}
                       />
                     )}
                     <Form.Text className="text-muted">

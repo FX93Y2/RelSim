@@ -22,7 +22,6 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
   const [resourceRequirements, setResourceRequirements] = useState([]);
   const [outcomes, setOutcomes] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [lastNodeId, setLastNodeId] = useState(null);
   const [nameValidation, setNameValidation] = useState({ valid: true, error: null });
 
   // Use the step helpers hook
@@ -31,14 +30,12 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
     validateStepId
   } = useStepHelpers(parsedSchema);
 
-  // Initialize form data when node changes
+  // Reset form data whenever modal opens or the selected node changes to ensure clean state
   useEffect(() => {
-    // Only reset form data when node actually changes (new node opened), not during auto-updates
-    if (node && node.data.stepConfig && (!lastNodeId || node.id !== lastNodeId)) {
-      setLastNodeId(node.id);
+    if (show && node?.data?.stepConfig) {
       initializeFormData(node.data.stepConfig);
     }
-  }, [node, parsedSchema, lastNodeId]);
+  }, [show, node?.id, parsedSchema]);
 
   // Validate initial name when form data is initialized
   useEffect(() => {
@@ -46,13 +43,6 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
       validateStepName(formData.name);
     }
   }, [formData.name, node, parsedSchema]);
-
-  // Reset form data whenever modal opens to ensure clean state
-  useEffect(() => {
-    if (show && node && node.data.stepConfig) {
-      initializeFormData(node.data.stepConfig);
-    }
-  }, [show, node, parsedSchema]);
 
   const currentStepId = node?.data?.stepConfig?.step_id;
 
