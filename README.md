@@ -105,6 +105,68 @@ CLI alternative:
 - Decide: route by probability or conditions (attributes or SQL queries).
 - Release: dispose entities and free all resources.
 
+### Scripted Tables
+
+For tables with complex, rule-based data (e.g., promotion history, audit trails), use a custom Python script instead of built-in generators.
+
+#### YAML Config
+
+Set `rows: script` and point to your Python file:
+
+```yaml
+- name: ConsultantTitleHistory
+  rows: script
+  generator:
+    type: script
+    path: scripts/generate_title_history.py   # relative to config file
+    function: generate                          # optional, defaults to 'generate'
+  attributes:
+    - name: id
+      type: pk
+    - name: consultant_id
+      type: fk
+      ref: Consultant.id
+    - name: title
+      type: string
+    - name: start_date
+      type: date
+    - name: end_date
+      type: date
+```
+
+#### Writing a Script
+
+Your script needs **one function** that takes a `context` object and returns a list of dicts:
+
+```python
+def generate(context):
+    """
+    context.session  — SQLAlchemy session (query parent tables)
+    context.models   — dict of all table models, e.g. context.models['Consultant']
+    context.entity   — this table's config
+    context.logger   — logger (messages appear in app logs)
+    """
+    Consultant = context.models['Consultant']
+    consultants = context.session.query(Consultant).all()
+
+    rows = []
+    for c in consultants:
+        rows.append({
+            "consultant_id": c.id,
+            "title": "Analyst",
+            "start_date": "2020-01-01",   # strings auto-convert to date objects
+            "end_date": "2021-06-15",
+        })
+    return rows
+```
+
+**Key points:**
+- Parent tables are always populated first (dependency order), so you can query them freely.
+- Return column values as strings, numbers, or Python date/datetime objects — type coercion is automatic.
+- Unknown column names in returned dicts are silently ignored.
+- If the script fails, the full Python traceback is shown in the logs.
+- Store scripts in a `scripts/` folder next to your config file.
+
 ### Results Viewer
 - Browse tables in the project sidebar and inspect simulation outcomes.
 - Export selected tables to CSV.

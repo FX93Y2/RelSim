@@ -15,7 +15,7 @@ from ..utils.path_resolver import resolve_output_dir
 # Create logger
 logger = logging.getLogger(__name__)
 
-def generate_database(config_path_or_content, output_dir='output', db_name=None, project_id=None, sim_config_path_or_content=None):
+def generate_database(config_path_or_content, output_dir='output', db_name=None, project_id=None, sim_config_path_or_content=None, project_dir=None):
     """
     Generate a SQLite database from a configuration file path or content string.
     Returns only the database path.
@@ -25,12 +25,13 @@ def generate_database(config_path_or_content, output_dir='output', db_name=None,
         output_dir,
         db_name,
         project_id,
-        sim_config_path_or_content
+        sim_config_path_or_content,
+        project_dir,
     )
     return db_path
 
 
-def generate_database_with_formula_support(config_path_or_content, output_dir='output', db_name=None, project_id=None, sim_config_path_or_content=None):
+def generate_database_with_formula_support(config_path_or_content, output_dir='output', db_name=None, project_id=None, sim_config_path_or_content=None, project_dir=None):
     """
     Generate a SQLite database and return both path and generator (for post-simulation formula resolution).
     """
@@ -39,11 +40,12 @@ def generate_database_with_formula_support(config_path_or_content, output_dir='o
         output_dir,
         db_name,
         project_id,
-        sim_config_path_or_content
+        sim_config_path_or_content,
+        project_dir,
     )
 
 
-def _generate_database_internal(config_path_or_content, output_dir, db_name, project_id, sim_config_path_or_content):
+def _generate_database_internal(config_path_or_content, output_dir, db_name, project_id, sim_config_path_or_content, project_dir=None):
     """Shared implementation for database generation."""
     # Parse DB config
     if os.path.exists(config_path_or_content) and os.path.isfile(config_path_or_content):
@@ -82,7 +84,7 @@ def _generate_database_internal(config_path_or_content, output_dir, db_name, pro
         db_name = db_name[:-3]
         logger.info(f"Removed .db extension from database name: {db_name}")
 
-    generator = DatabaseGenerator(config, output_dir, None, sim_config)
+    generator = DatabaseGenerator(config, output_dir, None, sim_config, project_dir=project_dir)
     db_path = generator.generate(db_name)
 
     # Ensure the returned path is absolute

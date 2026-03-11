@@ -120,7 +120,9 @@ def main():
         run_api(host=args.host, port=args.port)
     elif args.command == 'generate':
         try:
-            db_path = generate_database(args.config, args.output_dir, args.name, sim_config_path_or_content=args.sim_config)
+            # Derive project_dir from config file location (scripts are relative to it)
+            project_dir = os.path.dirname(os.path.abspath(args.config))
+            db_path = generate_database(args.config, args.output_dir, args.name, sim_config_path_or_content=args.sim_config, project_dir=project_dir)
             logger.info(f"Database generated at: {db_path}")
         except Exception as e:
             logger.error(f"Error generating database: {e}")

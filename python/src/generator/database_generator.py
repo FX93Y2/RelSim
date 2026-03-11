@@ -25,11 +25,13 @@ logger = logging.getLogger(__name__)
 class DatabaseGenerator:
     def __init__(self, config: DatabaseConfig, output_dir: str = "output",
                  dynamic_entity_tables: Optional[List[str]] = None,
-                 sim_config: Optional[SimulationConfig] = None):
+                 sim_config: Optional[SimulationConfig] = None,
+                 project_dir: Optional[str] = None):
         """Initialize generator with configs and destination."""
         self.config = config
         self.sim_config = sim_config
         self.output_dir = output_dir
+        self.project_dir = project_dir
         self.engine = None
         self.session = None
         self.dynamic_entity_tables = dynamic_entity_tables or []
@@ -100,6 +102,7 @@ class DatabaseGenerator:
             self.session,
             entity_assigned_attrs,
             self.dynamic_entity_tables,
+            project_dir=self.project_dir,
         )
         
         # Commit and close session

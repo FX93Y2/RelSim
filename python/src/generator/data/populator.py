@@ -25,7 +25,8 @@ class DataPopulator:
     
     def populate_tables(self, models: dict, config: DatabaseConfig, session, 
                        flow_assigned_attributes: dict,
-                       dynamic_entity_tables: List[str] = None):
+                       dynamic_entity_tables: List[str] = None,
+                       project_dir: str = None):
         """
         Populate tables with data based on configuration
         
@@ -35,10 +36,13 @@ class DataPopulator:
             session: SQLAlchemy session
             dynamic_entity_tables: List of tables to skip during population
             flow_assigned_attributes: Map of entity_table -> set(attribute_names) that will be assigned in flows
+            project_dir: Project root directory (for resolving script paths)
         """
         self.models = models
         self.session = session
+        self.config = config
         self.dynamic_entity_tables = dynamic_entity_tables or []
+        self.project_dir = project_dir
         # Map of entity_table -> set(attribute_names) that will be assigned in flows
         self.flow_assigned_attributes = flow_assigned_attributes
         
@@ -61,6 +65,11 @@ class DataPopulator:
         Args:
             entity: Entity configuration
         """
+        # Check for entity-level script generator — delegate entirely
+        if entity.generator and entity.generator.type == 'script':
+            self._execute_script_generator(entity)
+            return
+
         model_class = self.models[entity.name]
         
         # Determine number of rows to generate
@@ -213,6 +222,10 @@ class DataPopulator:
             # But here we're just skipping them for now
             return 0
         
+        # Handle 'script' — script generator controls row count
+        if entity.rows == 'script':
+            return 0
+        
         # Default value if rows is not specified
         return 10
     
@@ -248,3 +261,24 @@ class DataPopulator:
             True if there are pending formulas, False otherwise
         """
         return bool(self.pending_formulas)
+
+    def _execute_script_generator(self, entity: Entity):
+        """
+        Execute a user-provided script to generate rows for this table.
+        
+        Args:
+            entity: Entity config with entity.generator.type == 'script'
+        """
+        from .script_executor import ScriptExecutor
+        executor = ScriptExecutor()
+        row_count = executor.execute(
+            entity=entity,
+            session=self.session,
+            models=self.models,
+            config=self.config,
+            project_dir=self.project_dir,
+        )
+        logger.info(f"Script generated {row_count} rows for table '{entity.name}'")
+        
+        # Commit after script execution to make rows available for subsequent tables
+        self.session.commit()

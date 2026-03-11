@@ -19,6 +19,8 @@ class Generator:
     expression: Optional[str] = None     # Expression string for formula type generators
     values: Optional[List] = None
     subtype: Optional[str] = None  # Added for foreign_key generator support
+    path: Optional[str] = None           # Script file path (relative to project dir)
+    function: Optional[str] = None       # Entry point function name (default: 'generate')
 
 @dataclass
 class Relationship:
@@ -64,6 +66,7 @@ class Entity:
     attributes: List[Attribute]
     rows: Any = 0
     type: Optional[str] = None  # Added to specify table type (entity, event, resource, etc.)
+    generator: Optional[Generator] = None  # Entity-level generator (e.g., script type)
 
 @dataclass
 class DatabaseConfig:
@@ -209,11 +212,28 @@ def parse_db_config(file_path: Union[str, Path]) -> DatabaseConfig:
                 relationship=relationship
             ))
         
+        # Parse entity-level generator (e.g., script type)
+        entity_generator = None
+        if 'generator' in entity_dict:
+            gen_dict = entity_dict['generator']
+            entity_generator = Generator(
+                type=gen_dict['type'],
+                path=gen_dict.get('path'),
+                function=gen_dict.get('function', 'generate'),
+                method=gen_dict.get('method'),
+                template=gen_dict.get('template'),
+                formula=gen_dict.get('formula'),
+                expression=gen_dict.get('expression'),
+                values=gen_dict.get('values'),
+                subtype=gen_dict.get('subtype'),
+            )
+
         entity = Entity(
             name=entity_dict['name'],
             attributes=attributes,
             rows=entity_dict.get('rows', 0),
-            type=entity_dict.get('type')
+            type=entity_dict.get('type'),
+            generator=entity_generator,
         )
         
         # Validate entity configuration
@@ -284,11 +304,28 @@ def parse_db_config_from_string(content: str) -> DatabaseConfig:
                 relationship=relationship
             ))
         
+        # Parse entity-level generator (e.g., script type)
+        entity_generator = None
+        if 'generator' in entity_dict:
+            gen_dict = entity_dict['generator']
+            entity_generator = Generator(
+                type=gen_dict['type'],
+                path=gen_dict.get('path'),
+                function=gen_dict.get('function', 'generate'),
+                method=gen_dict.get('method'),
+                template=gen_dict.get('template'),
+                formula=gen_dict.get('formula'),
+                expression=gen_dict.get('expression'),
+                values=gen_dict.get('values'),
+                subtype=gen_dict.get('subtype'),
+            )
+
         entity = Entity(
             name=entity_dict['name'],
             attributes=attributes,
             rows=entity_dict.get('rows', 0),
-            type=entity_dict.get('type')
+            type=entity_dict.get('type'),
+            generator=entity_generator,
         )
         
         # Validate entity configuration
