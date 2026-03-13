@@ -110,8 +110,7 @@ CLI alternative:
 For tables with complex, rule-based data (e.g., promotion history, audit trails), use a custom Python script instead of built-in generators.
 
 #### YAML Config
-
-Set `rows: script` and point to your Python file:
+When you check the "Use custom python script" box in the UI, it sets `rows: script` and creates a generator block like this:
 
 ```yaml
 - name: ConsultantTitleHistory

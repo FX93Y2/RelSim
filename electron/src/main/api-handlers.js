@@ -3,7 +3,7 @@
  * Contains all IPC handlers for communication between renderer and main processes
  */
 
-const { ipcMain, app, shell } = require('electron');
+const { ipcMain, app, dialog, shell } = require('electron');
 const { execFile } = require('child_process');
 const os = require('os');
 const axios = require('axios');
@@ -222,6 +222,82 @@ function registerFileHandlers() {
 
   ipcMain.handle('api:showDirectoryPicker', async (_, options) => {
     return await showDirectoryPicker(options);
+  });
+
+  ipcMain.handle('api:openScriptFolder', async (_, projectId, entityName) => {
+    try {
+      const { getAppPaths } = require('./paths');
+      const appPaths = getAppPaths();
+
+      const projectDir = path.join(appPaths.output, projectId);
+      const scriptsDir = path.join(projectDir, 'scripts');
+
+      // Ensure scripts dir exists so the dialog can default to it
+      if (!fs.existsSync(scriptsDir)) {
+        fs.mkdirSync(scriptsDir, { recursive: true });
+        console.log(`Created scripts directory: ${scriptsDir}`);
+      }
+
+      // Scaffold a template script for this entity if it doesn't exist yet
+      if (entityName) {
+        const safeName = entityName.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+        const scriptName = `generate_${safeName}.py`;
+        const scriptFilePath = path.join(scriptsDir, scriptName);
+
+        if (!fs.existsSync(scriptFilePath)) {
+          const templateContent = `"""
+Script to generate rows for the '${entityName}' table.
+"""
+
+def generate(context):
+    """
+    Generate Custom Rows
+
+    context.session  - SQLAlchemy session (query parent tables here)
+    context.models   - dict of all table models (e.g. context.models['ParentTable'])
+    context.entity   - the entity configuration
+    context.logger   - logger instance (appears in app logs)
+
+    Returns:
+        List[dict]: A list of dictionaries representing the rows to insert.
+    """
+
+    context.logger.info("Generating rows for ${entityName}...")
+
+    rows = []
+
+    # --- Example ---
+    # rows.append({
+    #     "id": "123",
+    #     "name": "Sample",
+    #     # any columns defined in the YAML config
+    # })
+
+    return rows
+`;
+          fs.writeFileSync(scriptFilePath, templateContent, 'utf-8');
+          console.log(`Created script template: ${scriptFilePath}`);
+        }
+      }
+
+      // Use Electron's native file dialog (works on all platforms including WSL)
+      const result = await dialog.showOpenDialog({
+        title: 'Select Python Script',
+        defaultPath: scriptsDir,
+        filters: [{ name: 'Python Scripts', extensions: ['py'] }],
+        properties: ['openFile']
+      });
+
+      if (result.canceled) {
+        return { success: false, canceled: true };
+      }
+
+      return { success: true, path: result.filePaths[0] };
+
+    } catch (error) {
+      console.error(`Error opening script picker: ${error.message}`);
+      return { success: false, error: error.message };
+    }
   });
 }
 

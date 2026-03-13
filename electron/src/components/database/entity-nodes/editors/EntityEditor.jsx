@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
-import { FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiTrash2 } from 'react-icons/fi';
 import AttributeTable from './AttributeTable';
 import ConfirmationModal from '../../../shared/ConfirmationModal';
 
-const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, theme }) => {
+const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, theme, projectId }) => {
   const [name, setName] = useState('');
   const [entityType, setEntityType] = useState('');
   const [rows, setRows] = useState('n/a');
   const [isRowsFocused, setIsRowsFocused] = useState(false);
+  const [useScript, setUseScript] = useState(false);
+  const [scriptPath, setScriptPath] = useState('');
   const [attributes, setAttributes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
@@ -24,7 +26,10 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
         const normalizedType = entity.type === 'event' ? 'entity' : entity.type;
         setName(entity.name || '');
         setEntityType(normalizedType || '');
-        setRows(entity.rows === undefined ? 'n/a' : entity.rows);
+        const isScript = entity.rows === 'script';
+        setUseScript(isScript);
+        setRows(isScript ? 'n/a' : (entity.rows === undefined ? 'n/a' : entity.rows));
+        setScriptPath(entity.generator?.path || '');
 
         const attrs = normalizedType === 'entity' && entity.type === 'event'
           ? (entity.attributes || []).filter(attr => attr.type !== 'event_type')
@@ -38,6 +43,8 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
         setName('');
         setEntityType('');
         setRows('n/a');
+        setUseScript(false);
+        setScriptPath('');
         setAttributes([{ name: 'id', type: 'pk' }]);
         setValidationErrors([]);
       }
@@ -50,6 +57,10 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
 
     if (!name.trim()) {
       errors.push('Entity name is required');
+    }
+    
+    if (useScript && !scriptPath.trim()) {
+      errors.push('Script path is required when "Use Script" is checked');
     }
 
     if (attributes.length === 0) {
@@ -79,13 +90,6 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
 
     setValidationErrors(errors);
     return errors.length === 0;
-  };
-
-  // Handle attribute changes
-  const handleAttributeChange = (index, updatedAttribute) => {
-    const newAttributes = [...attributes];
-    newAttributes[index] = updatedAttribute;
-    setAttributes(newAttributes);
   };
 
   // Add new attribute
@@ -124,17 +128,13 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
   };
 
 
-  // Helper functions to handle form changes and mark as user editing
-  const handleNameChange = (newName) => {
-    setName(newName);
-  };
-
   const handleEntityTypeChange = (newType) => {
     setEntityType(newType);
 
     // Auto-set rows for dynamic table types
     if (newType === 'bridge' || newType === 'entity') {
       setRows('n/a');
+      setUseScript(false);
     }
 
     let updatedAttributes = [...attributes];
@@ -213,8 +213,10 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
       const updatedEntity = {
         name: name.trim(),
         type: entityType || undefined,
-        rows: entityType === 'resource' ? (typeof rows === 'number' ? rows : parseInt(rows) || 100) :
-          (rows === 'n/a' || rows === '' ? rows : (typeof rows === 'number' ? rows : parseInt(rows) || rows)),
+        rows: useScript ? 'script' : (
+          entityType === 'resource' ? (typeof rows === 'number' ? rows : parseInt(rows) || 100) :
+          (rows === 'n/a' || rows === '' ? rows : (typeof rows === 'number' ? rows : parseInt(rows) || rows))
+        ),
         attributes: attributes.map(attr => {
           const cleanedAttr = {
             name: attr.name.trim(),
@@ -236,6 +238,14 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
         })
       };
 
+      if (useScript) {
+        updatedEntity.generator = {
+          type: 'script',
+          path: scriptPath.trim(),
+          function: 'generate'
+        };
+      }
+
       onEntityUpdate(updatedEntity);
       return true;
     }
@@ -248,6 +258,24 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
       onHide();
     }
     // If save fails due to validation, modal stays open with errors visible
+  };
+
+  const handleOpenScriptFolder = async () => {
+    try {
+      setIsLoading(true);
+      const result = await window.api.openScriptFolder(projectId, name);
+      if (result.success && result.path) {
+        // Find the relative path from the project directory
+        // In this case, we know the structure is output/projectId/scripts/something.py
+        const scriptFileName = result.path.split(/[\\/]/).pop();
+        const relativePath = `scripts/${scriptFileName}`;
+        setScriptPath(relativePath);
+      }
+    } catch (err) {
+      console.error('Error opening script folder:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
@@ -290,7 +318,7 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
                         <Form.Control
                           type="text"
                           value={name}
-                          onChange={(e) => handleNameChange(e.target.value)}
+                          onChange={(e) => setName(e.target.value)}
                           placeholder="Enter entity name"
                           isInvalid={validationErrors.some(error => error.includes('Entity name'))}
                         />
@@ -355,16 +383,68 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
                         onFocus={() => setIsRowsFocused(true)}
                         onBlur={() => setIsRowsFocused(false)}
                         placeholder={isRowsFocused ? "" : "n/a"}
+                        disabled={useScript}
                       />
                     )}
-                    <Form.Text className="text-muted">
+                    
+                    {entityType !== 'bridge' && entityType !== 'entity' && (
+                      <div className="mt-2">
+                        <Form.Check 
+                          type="checkbox"
+                          id="use-script-checkbox"
+                          label="Use custom python script"
+                          checked={useScript}
+                          onChange={(e) => {
+                            setUseScript(e.target.checked);
+                            if (e.target.checked && !scriptPath) {
+                              const safeName = name.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() || 'entity';
+                              setScriptPath(`scripts/generate_${safeName}.py`);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    {useScript && (
+                      <div className="mt-3 p-3 border rounded" style={{ backgroundColor: theme === 'dark' ? '#2b2b2b' : '#f8f9fa' }}>
+                        <Form.Group>
+                          <Form.Label className="d-flex justify-content-between align-items-center">
+                            Script Path
+                            <Button 
+                              variant="outline-secondary" 
+                              size="sm"
+                              title="Open scripts folder"
+                              onClick={handleOpenScriptFolder}
+                              disabled={!name || isLoading}
+                              className="py-0 px-2"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" className="bi bi-folder2-open" viewBox="0 0 16 16">
+                                <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z"/>
+                              </svg>
+                            </Button>
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            size="sm"
+                            value={scriptPath}
+                            onChange={(e) => setScriptPath(e.target.value)}
+                            placeholder="scripts/generate_table.py"
+                            isInvalid={validationErrors.some(error => error.includes('Script path'))}
+                          />
+                        </Form.Group>
+                      </div>
+                    )}
+
+                    <Form.Text className="text-muted mt-2 d-block">
                       {entityType === 'resource'
                         ? 'Enter desired number of resources'
                         : entityType === 'bridge'
                           ? 'Bridging table rows will be dynamic'
                           : entityType === 'entity'
                             ? 'Entity table rows will be dynamic'
-                            : 'Define number of rows here'
+                            : useScript
+                              ? 'Rows are determined by the python script'
+                              : 'Define number of rows'
                       }
                     </Form.Text>
                   </Form.Group>
@@ -374,8 +454,6 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
 
             {/* Attributes Section */}
             <div className="entity-attributes-section">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-              </div>
 
               {attributes.length === 0 ? (
                 <Alert variant="info">

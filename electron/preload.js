@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld(
   openFile: (filePath) => ipcRenderer.invoke('api:openFile', filePath),
   saveFile: (filePath, content) => ipcRenderer.invoke('api:saveFile', filePath, content),
   showDirectoryPicker: (options) => ipcRenderer.invoke('api:showDirectoryPicker', options),
+  openScriptFolder: (projectId, entityName) => ipcRenderer.invoke('api:openScriptFolder', projectId, entityName),
 
   // App Controls
   reloadApp: () => ipcRenderer.invoke('api:reloadApp'),

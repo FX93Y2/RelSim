@@ -17,6 +17,13 @@ const { initAutoUpdater } = require('./src/main/updater');
 let appPaths = null;
 let isAppReady = false;
 
+// On WSL, dconf (GTK's settings backend) spams connection warnings when any
+// native file dialog opens because D-Bus is not available. Forcing GTK to use
+// an in-memory settings store suppresses the noise without affecting behaviour.
+if (process.platform === 'linux' && (process.env.WSL_DISTRO_NAME || (require('os').release() || '').toLowerCase().includes('microsoft'))) {
+  process.env.GSETTINGS_BACKEND = 'memory';
+}
+
 // Mitigation for GPU/IPC glitches after hibernate/resume (common on WSL/WSLg)
 // Disable hardware acceleration and force software GL before app 'ready'
 try {

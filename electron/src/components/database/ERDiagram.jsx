@@ -359,6 +359,7 @@ const ERDiagramInner = forwardRef(({ theme, projectId }, ref) => {
         onEntityUpdate={handleEntityUpdate}
         onEntityDelete={handleEntityDelete}
         theme={theme}
+        projectId={projectId}
       />
       <CanvasContextMenu
         visible={contextMenu.visible}
