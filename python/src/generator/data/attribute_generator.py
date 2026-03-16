@@ -88,6 +88,14 @@ def generate_attribute_value(attr_config: Dict[str, Any], row_index: int) -> Any
         logger.error(f"Distribution generator for {attr_name} missing 'formula' field")
         raise ValueError(f"Invalid distribution generator config for {attr_name}: formula field is required")
 
+    # Ordered list generator - assigns values sequentially from a list
+    elif generator_type == 'ordered_list':
+        values = generator_config.get('values', [])
+        if not values:
+            logger.warning(f"ordered_list generator for {attr_name} has empty values list")
+            return f"OrderedList_{attr_name}_{row_index}"
+        return values[row_index % len(values)]
+
     # Simulation event type - handled by simulation system
     elif generator_type == 'simulation_event':
         values = generator_config.get('values', [])

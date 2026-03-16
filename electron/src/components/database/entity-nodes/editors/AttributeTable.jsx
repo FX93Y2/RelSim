@@ -7,6 +7,7 @@ import TemplateGeneratorEditor from './TemplateGeneratorEditor';
 import DistributionGeneratorEditor from './DistributionGeneratorEditor';
 import ForeignKeyGeneratorEditor from './ForeignKeyGeneratorEditor';
 import FormulaGeneratorEditor from './FormulaGeneratorEditor';
+import OrderedListGeneratorEditor from './OrderedListGeneratorEditor';
 import TypeSelector from '../../../shared/TypeSelector';
 
 const AttributeTable = ({
@@ -51,6 +52,8 @@ const AttributeTable = ({
         return `FK: ${attribute.generator.subtype || 'many_to_one'}`;
       case 'formula':
         return `Formula: ${attribute.generator.expression ? 'expression' : 'empty'}`;
+      case 'ordered_list':
+        return `List: ${(attribute.generator.values || []).length} items`;
       case 'none':
         return 'None';
       default:
@@ -239,6 +242,15 @@ const AttributeTable = ({
           delete updatedGenerator.template;
           delete updatedGenerator.formula;
           delete updatedGenerator.subtype;
+          delete updatedGenerator.values;
+          break;
+        case 'ordered_list':
+          updatedGenerator.values = updatedGenerator.values || [];
+          delete updatedGenerator.method;
+          delete updatedGenerator.template;
+          delete updatedGenerator.formula;
+          delete updatedGenerator.subtype;
+          delete updatedGenerator.expression;
           break;
       }
     }
@@ -293,6 +305,14 @@ const AttributeTable = ({
           <FormulaGeneratorEditor
             generator={generator}
             onExpressionChange={(expression) => handleGeneratorChange('expression', expression)}
+          />
+        );
+
+      case 'ordered_list':
+        return (
+          <OrderedListGeneratorEditor
+            generator={generator}
+            onGeneratorChange={handleGeneratorChange}
           />
         );
 
@@ -478,6 +498,7 @@ const AttributeTable = ({
                         <option value="foreign_key">Foreign Key</option>
                       )}
                       <option value="formula">Formula</option>
+                      <option value="ordered_list">Ordered List</option>
                     </Form.Select>
                     {(selectedAttribute.type === 'fk' || selectedAttribute.type === 'resource_type') && (
                       <Form.Text className="text-muted">
