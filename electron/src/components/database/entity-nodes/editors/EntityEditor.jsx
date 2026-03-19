@@ -49,7 +49,7 @@ const EntityEditor = ({ show, onHide, entity, onEntityUpdate, onEntityDelete, th
         setValidationErrors([]);
       }
     }
-  }, [show, entity?.name]);
+  }, [show, entity?.name, entity?.generator?.path]);
 
   // Validate entity data
   const validateEntity = () => {

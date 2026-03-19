@@ -4,6 +4,7 @@ entities:
     attributes:
       - name: LocationID
         type: pk
+      # Note: City and State are generated independently by faker and may not match geographically
       - name: State
         type: string
         generator:
@@ -95,21 +96,42 @@ entities:
         generator:
           type: foreign_key
           subtype: many_to_one
-      - name: ConsultantName
+      - name: FirstName
         type: string
         generator:
           type: faker
-          method: person.fullName()
+          method: person.firstName()
+      - name: LastName
+        type: string
+        generator:
+          type: faker
+          method: person.lastName()
+      - name: Email
+        type: string
+        generator:
+          type: faker
+          method: internet.email()
+      - name: Contact
+        type: string
+        generator:
+          type: faker
+          method: phone.number()
       - name: resource_type
         type: resource_type
         generator:
           type: distribution
-          formula: DISC(0.30, Junior, 0.30, Mid, 0.20, Senior, 0.10, Lead, 0.05,
-            Principal, 0.05, Executive)
+          formula: DISC(0.30, Consultant, 0.30, Senior Consultant, 0.20, Manager, 0.10,
+            Senior Manager, 0.05, Associate Partner, 0.05, Partner)
   - name: Consultant_Title_History
     type: bridge
-    rows: n/a
+    rows: script
+    generator:
+      type: script
+      path: scripts/generate_title_history.py
+      function: generate
     attributes:
+      - name: id
+        type: pk
       - name: ConsultantID
         type: resource_id
         ref: Consultant.ConsultantID
@@ -230,6 +252,8 @@ entities:
     type: bridge
     rows: n/a
     attributes:
+      - name: id
+        type: pk
       - name: DeliverableID
         type: entity_id
         ref: Deliverable.DeliverableID
@@ -251,6 +275,8 @@ entities:
     type: bridge
     rows: n/a
     attributes:
+      - name: id
+        type: pk
       - name: DeliverableID
         type: entity_id
         ref: Deliverable.DeliverableID

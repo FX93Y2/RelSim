@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from flask import Blueprint, request
 from config_storage.config_db import ConfigManager
 from src.generator import generate_database
+from src.utils.path_resolver import resolve_output_dir
 from ..utils.response_helpers import (
     success_response, error_response, not_found_response, validation_error_response,
     handle_exception, require_json_fields, log_api_request
@@ -48,9 +49,10 @@ def generate_db():
         project_id = data.get('project_id')
         
         # Pass configuration content directly to generate_database
-        logger.info(f"Generating database directly from config content (project_id={project_id})")
+        project_dir = resolve_output_dir(project_id=project_id) if project_id else None
+        logger.info(f"Generating database directly from config content (project_id={project_id}, project_dir={project_dir})")
         with run_log_context(project_id=project_id, db_name=db_name):
-            db_path = generate_database(config['content'], output_dir, db_name, project_id)
+            db_path = generate_database(config['content'], output_dir, db_name, project_id, project_dir=project_dir)
         
         # Build a relative path for the frontend (matches scanProjectResults format)
         db_filename = os.path.basename(db_path)

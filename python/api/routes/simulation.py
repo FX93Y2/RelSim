@@ -174,15 +174,17 @@ def generate_and_simulate():
         
         _cleanup_existing_database(output_dir, project_id, db_name, db_config)
         
+        project_dir = resolve_output_dir(project_id=project_id) if project_id else None
         with run_log_context(project_id=project_id, db_name=db_name):
-            logger.info(f"Generating database with project_id: {project_id}")
+            logger.info(f"Generating database with project_id: {project_id}, project_dir: {project_dir}")
             from src.generator import generate_database_with_formula_support
             db_path, generator = generate_database_with_formula_support(
                 db_config['content'], 
                 output_dir,
                 db_name,
                 project_id,
-                sim_config['content']
+                sim_config['content'],
+                project_dir=project_dir
             )
             
             if not _verify_database_creation(db_path):

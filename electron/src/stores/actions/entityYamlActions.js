@@ -19,6 +19,7 @@ export const createEntityYamlActions = (set, get) => ({
         name: entity.name,
         ...(entity.type && { type: entity.type }),
         rows: entity.rows || 'n/a',
+        ...(entity.generator && { generator: entity.generator }),
         attributes: entity.attributes || []
       }))
     };

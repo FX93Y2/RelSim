@@ -278,9 +278,6 @@ export const createEntityActions = (set, get) => ({
                 animated: false,
                 type: 'erEdge',
                 style: { stroke: '#b1b7c1' },
-                animated: false,
-                type: 'erEdge',
-                style: { stroke: '#b1b7c1' },
                 markerStart: 'crows-foot-many',
                 markerEnd: 'crows-foot-one',
                 data: {
@@ -303,6 +300,7 @@ export const createEntityActions = (set, get) => ({
           name: entity.name,
           type: entity.type,
           rows: entity.rows,
+          ...(entity.generator && { generator: entity.generator }),
           attributes: entity.attributes || []
         }))
       };
@@ -370,9 +368,6 @@ export const createEntityActions = (set, get) => ({
       const newEdge = {
         id: `${connection.source}-${connection.target}`,
         ...connection,
-        animated: false,
-        type: 'erEdge',
-        style: { stroke: '#b1b7c1' },
         animated: false,
         type: 'erEdge',
         style: { stroke: '#b1b7c1' },

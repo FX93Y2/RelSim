@@ -236,7 +236,8 @@ export const createEntityUIActions = (set, get) => ({
         name: updatedEntity.name,
         type: updatedEntity.type,
         rows: updatedEntity.rows,
-        attributes: updatedEntity.attributes
+        attributes: updatedEntity.attributes,
+        generator: updatedEntity.generator
       };
 
       get().updateEntity(selectedEntity.id, updateData);

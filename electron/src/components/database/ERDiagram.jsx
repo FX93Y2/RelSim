@@ -156,11 +156,6 @@ const ERDiagramInner = forwardRef(({ theme, projectId }, ref) => {
     handleEntityConnect(connection);
   }, [handleEntityConnect]);
 
-  // Remove onNodeClick to allow ReactFlow's native multiselection
-  // const onNodeClick = React.useCallback((event, node) => {
-  //   handleEntityClick(event, node);
-  // }, [handleEntityClick]);
-
   const onNodeDoubleClick = React.useCallback((event, node) => {
     handleEntityDoubleClick(event, node);
   }, [handleEntityDoubleClick]);
@@ -180,6 +175,7 @@ const ERDiagramInner = forwardRef(({ theme, projectId }, ref) => {
         name: canonicalEntity.name,
         type: canonicalEntity.type,
         rows: canonicalEntity.rows,
+        ...(canonicalEntity.generator && { generator: canonicalEntity.generator }),
         attributes: canonicalEntity.attributes || []
       };
     }
