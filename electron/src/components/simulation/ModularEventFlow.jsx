@@ -21,7 +21,9 @@ import {
   useUIActions,
   useSimulationClipboard,
   useSimulationContextMenu,
-  useSimulationData
+  useSimulationData,
+  useShowEditModal,
+  useSelectedNode
 } from '../../stores/simulationConfigStore';
 
 // Shared hooks (keep these)
@@ -60,6 +62,8 @@ const ModularEventFlowInner = forwardRef(({ theme, dbConfigContent, projectId },
   const selectionMode = useSimulationSelectionMode(projectId);
   const clipboard = useSimulationClipboard(projectId);
   const contextMenu = useSimulationContextMenu(projectId);
+  const showEditModal = useShowEditModal(projectId);
+  const selectedNode = useSelectedNode(projectId);
 
   // Store actions
   const {
@@ -570,9 +574,9 @@ const ModularEventFlowInner = forwardRef(({ theme, dbConfigContent, projectId },
       )}
 
       <NodeEditModal
-        show={getStoreState().showEditModal}
+        show={showEditModal}
         onHide={closeModal}
-        node={getStoreState().selectedNode}
+        node={selectedNode}
         onNodeUpdate={handleNodeUpdate}
         onNodeDelete={onNodesDelete}
         theme={theme}

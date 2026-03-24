@@ -169,7 +169,8 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
       duration_min: duration.distribution?.min || 0,
       duration_max: duration.distribution?.max || 10,
       duration_values: duration.distribution?.values ? duration.distribution.values.join(', ') : '1, 2, 3',
-      duration_weights: duration.distribution?.weights ? duration.distribution.weights.join(', ') : '0.5, 0.3, 0.2'
+      duration_weights: duration.distribution?.weights ? duration.distribution.weights.join(', ') : '0.5, 0.3, 0.2',
+      _initializedForNode: node?.id
     });
 
     setResourceRequirements(eventConfig.resource_requirements || []);
@@ -183,7 +184,8 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
 
     setFormData({
       name: stepName,
-      decision_type: decideConfig.decision_type || '2way-chance'
+      decision_type: decideConfig.decision_type || '2way-chance',
+      _initializedForNode: node?.id
     });
 
     // Convert outcomes to use step IDs as display names (step_id is the display name)
@@ -244,7 +246,8 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
     const stepName = stepConfig.step_id || '';
 
     setFormData({
-      name: stepName
+      name: stepName,
+      _initializedForNode: node?.id
     });
 
     // Initialize assignments
@@ -273,7 +276,8 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
     const stepName = stepConfig.step_id || 'Release';
 
     setFormData({
-      name: stepName
+      name: stepName,
+      _initializedForNode: node?.id
     });
   };
 
@@ -296,7 +300,8 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
       max_entities: createConfig.max_entities || 'n/a',
       next_step: stepConfig.next_steps && stepConfig.next_steps.length > 0 ? stepConfig.next_steps[0] : '',
       next_steps: stepConfig.next_steps || [],
-      is_triggered: !interarrivalTime || (!interarrivalTime.formula && !interarrivalTime.distribution)
+      is_triggered: !interarrivalTime || (!interarrivalTime.formula && !interarrivalTime.distribution),
+      _initializedForNode: node?.id
     });
   };
 
@@ -311,13 +316,14 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
       target_table: triggerConfig.target_table || '',
       count: triggerConfig.count !== undefined ? triggerConfig.count : 1,
       fk_column: triggerConfig.fk_column || '',
-      next_step: stepConfig.next_steps && stepConfig.next_steps.length > 0 ? stepConfig.next_steps[0] : ''
+      next_step: stepConfig.next_steps && stepConfig.next_steps.length > 0 ? stepConfig.next_steps[0] : '',
+      _initializedForNode: node?.id
     });
   };
 
   // Helper function to handle form data changes
   const handleFormDataChange = (newData) => {
-    setFormData({ ...formData, ...newData });
+    setFormData(prev => ({ ...prev, ...newData }));
 
     // Validate step name when it changes
     if (newData.name !== undefined) {
@@ -855,9 +861,15 @@ const NodeEditModal = ({ show, onHide, node, onNodeUpdate, onNodeDelete, theme, 
           <Modal.Title>Edit {node?.data.stepConfig?.step_type || 'Step'} Step</Modal.Title>
         </Modal.Header>
         <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          {renderStepEditor()}
-        </Modal.Body>
-        <Modal.Footer>
+        {formData._initializedForNode === node?.id ? (
+          renderStepEditor()
+        ) : (
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
+            <span className="text-muted">Loading configuration...</span>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
           {node && (
             <Button
               variant="outline-danger"
