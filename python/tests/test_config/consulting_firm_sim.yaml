@@ -6,15 +6,15 @@ simulation:
   resources:
     - resource_table: Consultant
       capacities:
-        Consultant: 18
-        Senior Consultant: 18
-        Manager: 12
-        Senior Manager: 6
-        Associate Partner: 3
-        Partner: 3
+        Consultant: 1
+        Senior Consultant: 1
+        Manager: 1
+        Senior Manager: 1
+        Associate Partner: 1
+        Partner: 1
 event_simulation:
   event_flows:
-    - flow_id: flow_1_project_lifecycle
+    - flow_id: flow_1_create_project
       event_flow: ProjectLifecycle
       steps:
         - step_id: create_project
@@ -27,7 +27,6 @@ event_simulation:
             max_entities: n/a
           next_steps:
             - assign_project_status
-
         - step_id: assign_project_status
           step_type: assign
           assign_config:
@@ -37,7 +36,6 @@ event_simulation:
                 value: Not Started
           next_steps:
             - trigger_billing_rates
-
         - step_id: trigger_billing_rates
           step_type: trigger
           trigger_config:
@@ -45,8 +43,15 @@ event_simulation:
             count: 6
             fk_column: ProjectID
           next_steps:
+            - project_planning
+        - step_id: project_planning
+          step_type: event
+          event_config:
+            duration:
+              formula: NORM(30, 5)
+              time_unit: days
+          next_steps:
             - spawn_deliverables
-
         - step_id: spawn_deliverables
           step_type: create
           create_config:
@@ -55,8 +60,15 @@ event_simulation:
             max_entities: n/a
             entities_per_arrival: 5
           next_steps:
+            - assign_project_status_2
+        - step_id: assign_project_status_2
+          step_type: assign
+          assign_config:
+            assignments:
+              - assignment_type: sql
+                expression: "UPDATE Project_Plan SET ProjectStatus = 'InProgress' WHERE ProjectID = Entity.ProjectID"
+          next_steps:
             - scope_deliverable
-
         - step_id: scope_deliverable
           step_type: event
           event_config:
@@ -67,10 +79,10 @@ event_simulation:
               - resource_table: Consultant
                 value: Manager
                 count: 1
+            bridge_table: Consultant_Deliverable_Mapping
           next_steps:
             - trigger_title_plan_mapping
           group_id: group_1
-
         - step_id: trigger_title_plan_mapping
           step_type: trigger
           trigger_config:
@@ -79,7 +91,6 @@ event_simulation:
             fk_column: DeliverableID
           next_steps:
             - trigger_expenses
-
         - step_id: trigger_expenses
           step_type: trigger
           trigger_config:
@@ -89,7 +100,6 @@ event_simulation:
             timestamp_column: Date
           next_steps:
             - trigger_progress
-
         - step_id: trigger_progress
           step_type: trigger
           trigger_config:
@@ -99,7 +109,6 @@ event_simulation:
             timestamp_column: Report_Month
           next_steps:
             - work_on_deliverable
-
         - step_id: work_on_deliverable
           step_type: event
           event_config:
@@ -117,7 +126,6 @@ event_simulation:
           next_steps:
             - review_deliverable
           group_id: group_1
-
         - step_id: review_deliverable
           step_type: event
           event_config:
@@ -128,9 +136,118 @@ event_simulation:
               - resource_table: Consultant
                 value: Senior Manager
                 count: 1
+            bridge_table: Consultant_Deliverable_Mapping
+          next_steps:
+            - assign_project_status_3
+          group_id: group_1
+        - step_id: assign_project_status_3
+          step_type: assign
+          assign_config:
+            assignments:
+              - assignment_type: sql
+                expression: "UPDATE Project_Plan SET ProjectStatus = 'Completed' WHERE ProjectID = Entity.ProjectID"
           next_steps:
             - release_all
+        - step_id: release_all
+          step_type: release
+    - flow_id: flow_2_spawn_deliverables
+      event_flow: ProjectLifecycle
+      steps:
+        - step_id: spawn_deliverables
+          step_type: create
+          create_config:
+            entity_table: Deliverable
+            interarrival_time: null
+            max_entities: n/a
+            entities_per_arrival: 5
+          next_steps:
+            - assign_project_status_2
+        - step_id: assign_project_status_2
+          step_type: assign
+          assign_config:
+            assignments:
+              - assignment_type: sql
+                expression: "UPDATE Project_Plan SET ProjectStatus = 'InProgress' WHERE ProjectID = Entity.ProjectID"
+          next_steps:
+            - scope_deliverable
+        - step_id: scope_deliverable
+          step_type: event
+          event_config:
+            duration:
+              formula: NORM(5, 1)
+              time_unit: days
+            resource_requirements:
+              - resource_table: Consultant
+                value: Manager
+                count: 1
+            bridge_table: Consultant_Deliverable_Mapping
+          next_steps:
+            - trigger_title_plan_mapping
           group_id: group_1
-
+        - step_id: trigger_title_plan_mapping
+          step_type: trigger
+          trigger_config:
+            target_table: Deliverable_Title_Plan_Mapping
+            count: 6
+            fk_column: DeliverableID
+          next_steps:
+            - trigger_expenses
+        - step_id: trigger_expenses
+          step_type: trigger
+          trigger_config:
+            target_table: Actual_Project_Expense
+            count: 3
+            fk_column: DeliverableID
+            timestamp_column: Date
+          next_steps:
+            - trigger_progress
+        - step_id: trigger_progress
+          step_type: trigger
+          trigger_config:
+            target_table: Deliverable_Progress_Month
+            count: 2
+            fk_column: DeliverableID
+            timestamp_column: Report_Month
+          next_steps:
+            - work_on_deliverable
+        - step_id: work_on_deliverable
+          step_type: event
+          event_config:
+            duration:
+              formula: NORM(30, 10)
+              time_unit: days
+            resource_requirements:
+              - resource_table: Consultant
+                value: Consultant
+                count: 1
+              - resource_table: Consultant
+                value: Senior Consultant
+                count: 1
+            bridge_table: Consultant_Deliverable_Mapping
+          next_steps:
+            - review_deliverable
+          group_id: group_1
+        - step_id: review_deliverable
+          step_type: event
+          event_config:
+            duration:
+              formula: NORM(3, 1)
+              time_unit: days
+            resource_requirements:
+              - resource_table: Consultant
+                value: Senior Manager
+                count: 1
+            bridge_table: Consultant_Deliverable_Mapping
+          next_steps:
+            - assign_project_status_3
+          group_id: group_1
+        - step_id: assign_project_status_3
+          step_type: assign
+          assign_config:
+            assignments:
+              - assignment_type: sql
+                expression: "UPDATE Project_Plan SET ProjectStatus = 'Completed' WHERE ProjectID = Entity.ProjectID"
+          next_steps:
+            - release_all
         - step_id: release_all
           step_type: release

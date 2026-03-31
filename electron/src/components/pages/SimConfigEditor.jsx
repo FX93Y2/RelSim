@@ -52,7 +52,7 @@ const SimConfigEditor = ({
 }) => {
   const { configId } = useParams();
   const { showError } = useToastContext();
-  
+
   // Resizable grid hook for panel sizing - unified across both editors
   const { handleMouseDown } = useResizableGrid({
     minWidthPercent: 22,
@@ -110,7 +110,7 @@ const SimConfigEditor = ({
   });
 
   useKeyboardShortcuts({ undo, redo, canUndo, canRedo });
-  
+
   useConfigurationLoader({
     projectId,
     configId,
@@ -124,27 +124,38 @@ const SimConfigEditor = ({
     hasContent
   });
 
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  // Mark config as loaded once yamlContent becomes available and we're not loading
+  React.useEffect(() => {
+    if (!isLoading && yamlContent && !configLoaded) {
+      setConfigLoaded(true);
+    }
+  }, [isLoading, yamlContent, configLoaded]);
+
   // Resource synchronization - auto-manage resources when database config changes
   React.useEffect(() => {
-    if (!isLoading && dbConfigContent && Object.keys(resourceDefinitions).length >= 0) {
+    // Wait until the simulation config has actually been loaded from backend
+    // isLoading starts as false, so we can't rely on it alone - we need configLoaded
+    if (!isLoading && dbConfigContent && configLoaded && Object.keys(resourceDefinitions).length >= 0) {
       console.log('[SimConfigEditor] Resource definitions detected:', Object.keys(resourceDefinitions));
-      
+
       const currentSimulationData = getEffectiveSimulationData();
       const currentResources = currentSimulationData.resources || [];
-      
+
       // Get all current resource table names
       const currentResourceTables = new Set(currentResources.map(r => r.resource_table));
-      
+
       // Get all detected resource table names
       const detectedResourceTables = new Set(Object.keys(resourceDefinitions));
-      
+
       let hasChanges = false;
-      
+
       // Add new resources that don't exist in current simulation data
       Object.keys(resourceDefinitions).forEach(resourceName => {
         const definition = resourceDefinitions[resourceName];
         const existingResource = currentResources.find(r => r.resource_table === resourceName);
-        
+
         if (!existingResource) {
           console.log(`[SimConfigEditor] Adding new resource table: ${resourceName}`);
           definition.resourceTypes.forEach(resourceType => {
@@ -162,7 +173,7 @@ const SimConfigEditor = ({
           });
         }
       });
-      
+
       // Remove resources that no longer exist in database config
       currentResourceTables.forEach(resourceTable => {
         if (!detectedResourceTables.has(resourceTable)) {
@@ -171,14 +182,14 @@ const SimConfigEditor = ({
           hasChanges = true;
         }
       });
-      
+
       // If no resources detected, clear all resources
       if (Object.keys(resourceDefinitions).length === 0 && currentResources.length > 0) {
         console.log('[SimConfigEditor] No resources detected, clearing all');
         clearAllResources();
         hasChanges = true;
       }
-      
+
       // Sync to YAML if changes were made
       if (hasChanges) {
         setTimeout(() => {
@@ -186,12 +197,12 @@ const SimConfigEditor = ({
         }, 100); // Small delay to ensure all store updates are complete
       }
     }
-  }, [dbConfigContent, resourceDefinitions, isLoading, updateResourceCapacity, clearAllResources, getEffectiveSimulationData, removeResource, syncSimulationToYaml]);
+  }, [dbConfigContent, resourceDefinitions, isLoading, configLoaded, updateResourceCapacity, clearAllResources, getEffectiveSimulationData, removeResource, syncSimulationToYaml]);
 
   // Generate collision-free step ID
   const generateStepId = useCallback((stepType) => {
     const existingStepIds = canonicalSteps.map(s => s.step_id);
-    
+
     if (stepType === 'create') {
       let counter = 1;
       let stepId = `create_entities_${counter}`;
@@ -201,14 +212,14 @@ const SimConfigEditor = ({
       }
       return stepId;
     }
-    
+
     let counter = 1;
     let stepId = `${stepType}_${counter}`;
     while (existingStepIds.includes(stepId)) {
       counter++;
       stepId = `${stepType}_${counter}`;
     }
-    
+
     return stepId;
   }, [canonicalSteps]);
 
@@ -249,7 +260,7 @@ const SimConfigEditor = ({
               conditions: [{ if: "Probability", is: "==", value: 0.5 }]
             },
             {
-              outcome_id: "outcome_2", 
+              outcome_id: "outcome_2",
               next_step_id: "",
               conditions: [{ if: "Probability", is: "==", value: 0.5 }]
             }
@@ -371,7 +382,7 @@ const SimConfigEditor = ({
             dbConfigContent={dbConfigContent}
             projectId={projectId}
           />
-          
+
           {/* Floating Toolbar for Event Flow */}
           <FloatingToolbar
             items={toolbarItems}
@@ -396,9 +407,9 @@ const SimConfigEditor = ({
           </div>
         </div>
       )}
-      
+
       {editorComponent}
-      
+
       <input
         ref={yamlOperations.fileInputRef}
         type="file"
@@ -406,7 +417,7 @@ const SimConfigEditor = ({
         style={{ display: 'none' }}
         onChange={yamlOperations.handleFileChange}
       />
-      
+
       {/* Modals */}
       {/* Save Modal */}
       <Modal
@@ -465,8 +476,8 @@ const SimConfigEditor = ({
           <Button variant="secondary" onClick={() => setShowResourceModal(false)}>
             Close
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={async () => {
               try {
                 // Sync resources to YAML first, then save configuration
