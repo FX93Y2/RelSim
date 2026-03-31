@@ -86,6 +86,7 @@ event_simulation:
             target_table: Actual_Project_Expense
             count: 3
             fk_column: DeliverableID
+            timestamp_column: Date
           next_steps:
             - trigger_progress
 
@@ -95,6 +96,7 @@ event_simulation:
             target_table: Deliverable_Progress_Month
             count: 2
             fk_column: DeliverableID
+            timestamp_column: Report_Month
           next_steps:
             - work_on_deliverable
 

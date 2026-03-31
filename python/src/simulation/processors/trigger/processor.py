@@ -159,6 +159,9 @@ class TriggerStepProcessor(StepProcessor):
                 trigger_config, target_entity, step.step_id
             )
 
+            # Detect one_to_one FK columns from db config and pre-build decks
+            one_to_one_decks = self._build_one_to_one_decks(target_entity, fk_column, count)
+
             # Generate records
             generated_ids = self._generate_records(
                 target_table=trigger_config.target_table,
@@ -169,7 +172,8 @@ class TriggerStepProcessor(StepProcessor):
                 sim_time_column=sim_time_column,
                 event_timestamp=event_timestamp,
                 sim_minutes=sim_minutes,
-                timestamp_missing_attr=ts_missing_attr
+                timestamp_missing_attr=ts_missing_attr,
+                one_to_one_decks=one_to_one_decks
             )
 
             self.logger.info(
@@ -336,6 +340,59 @@ class TriggerStepProcessor(StepProcessor):
         sim_minutes = self.env.now if sim_time_column else None
         return timestamp_column, sim_time_column, event_timestamp, sim_minutes, timestamp_missing_attr
 
+    def _build_one_to_one_decks(self, target_entity, fk_column: str, count: int) -> Dict[str, List]:
+        """
+        Scan target entity attributes for foreign_key generators with subtype 'one_to_one'.
+        For each, query all values from the referenced table and return a deck (list) to pop from.
+
+        Args:
+            target_entity: Target entity config
+            fk_column: The entity FK column (skip this one, it's set to entity_id)
+            count: Number of records to generate (used for logging)
+
+        Returns:
+            Dict mapping column name to list of values to assign in order
+        """
+        import random as rand_module
+
+        decks = {}
+        if not target_entity:
+            return decks
+
+        for attr in target_entity.attributes:
+            # Skip the entity FK column (already handled)
+            if attr.name == fk_column:
+                continue
+            if not attr.generator or getattr(attr.generator, "type", None) != "foreign_key":
+                continue
+            subtype = getattr(attr.generator, "subtype", "many_to_one")
+            if subtype != "one_to_one" or not attr.ref:
+                continue
+
+            ref_table, ref_col = attr.ref.split('.')
+            try:
+                with self.engine.connect() as conn:
+                    result = conn.execute(
+                        text(f'SELECT "{ref_col}" FROM "{ref_table}" ORDER BY "{ref_col}"')
+                    ).fetchall()
+                    values = [row[0] for row in result]
+
+                    if not values:
+                        self.logger.warning(f"No parent rows found for 1:1 FK '{attr.name}' in '{target_entity.name}'")
+                        decks[attr.name] = []
+                    else:
+                        deck = list(values)
+                        rand_module.shuffle(deck)
+                        decks[attr.name] = deck
+                        self.logger.info(
+                            f"Prepared 1:1 deck for {attr.name}: {len(deck)} unique IDs "
+                            f"(generating {count} records)"
+                        )
+            except Exception as e:
+                self.logger.error(f"Error building one_to_one deck for {attr.name}: {e}")
+
+        return decks
+
     def _ensure_timestamp_column_exists(self, table_name: str, column_name: str):
         """Add a datetime column if it does not exist."""
         inspector = inspect(self.engine)
@@ -357,7 +414,8 @@ class TriggerStepProcessor(StepProcessor):
         sim_time_column: Optional[str],
         event_timestamp,
         sim_minutes: Optional[float],
-        timestamp_missing_attr: bool = False
+        timestamp_missing_attr: bool = False,
+        one_to_one_decks: Optional[Dict[str, List]] = None
     ) -> List[int]:
         """
         Generate records in target table.
@@ -371,6 +429,7 @@ class TriggerStepProcessor(StepProcessor):
             sim_time_column: Optional column to store simulation time in minutes
             event_timestamp: Simulation datetime to insert when timestamp_column is set
             sim_minutes: Simulation time in minutes when sim_time_column is set
+            one_to_one_decks: Dict mapping column names to lists of values for 1:1 FK assignment
 
         Returns:
             List of generated record IDs
@@ -424,6 +483,16 @@ class TriggerStepProcessor(StepProcessor):
                         row_data[attr.name] = entity_id
                         continue
 
+                    # Handle one_to_one FK columns - pop from pre-built deck
+                    if one_to_one_decks and attr.name in one_to_one_decks:
+                        deck = one_to_one_decks[attr.name]
+                        if deck:
+                            row_data[attr.name] = deck.pop(0)
+                        else:
+                            self.logger.warning(f"one_to_one deck for {attr.name} is empty")
+                            row_data[attr.name] = None
+                        continue
+
                     # Handle timestamp column (simulation datetime)
                     if timestamp_column and attr.name == timestamp_column:
                         row_data[attr.name] = event_timestamp
@@ -432,6 +501,22 @@ class TriggerStepProcessor(StepProcessor):
                     # Handle simulation time column (minutes)
                     if sim_time_column and attr.name == sim_time_column:
                         row_data[attr.name] = sim_minutes
+                        continue
+
+                    # Handle foreign_key generators by querying the referenced table
+                    if attr.generator and getattr(attr.generator, "type", None) == "foreign_key":
+                        if attr.ref:
+                            try:
+                                ref_table, ref_col = attr.ref.split('.')
+                                fk_result = conn.execute(
+                                    text(f'SELECT "{ref_col}" FROM "{ref_table}" ORDER BY RANDOM() LIMIT 1')
+                                ).scalar()
+                                row_data[attr.name] = fk_result
+                            except Exception as e:
+                                self.logger.warning(f"Error resolving foreign key for {attr.name}: {e}")
+                                row_data[attr.name] = None
+                        else:
+                            row_data[attr.name] = None
                         continue
 
                     # Generate value using configured generator
@@ -452,8 +537,10 @@ class TriggerStepProcessor(StepProcessor):
                                     'type': attr.generator.type,
                                     'method': attr.generator.method,
                                     'template': attr.generator.template,
-                                    'formula': attr.generator.formula, 
-                                    'expression': getattr(attr.generator, 'expression', None)
+                                    'formula': attr.generator.formula,
+                                    'expression': getattr(attr.generator, 'expression', None),
+                                    'values': getattr(attr.generator, 'values', None),
+                                    'subtype': getattr(attr.generator, 'subtype', None),
                                 }
                             }
                             value = generate_attribute_value(attr_dict, current_row_index)

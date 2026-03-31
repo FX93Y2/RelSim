@@ -182,14 +182,29 @@ entities:
           formula: UNIF(50000, 500000)
       - name: PlannedStartDate
         type: date
+        generator:
+          type: formula
+          expression: "@created_at + DAYS(RANDOM(20, 40))"
       - name: PlannedEndDate
         type: date
+        generator:
+          type: formula
+          expression: "@created_at + DAYS(RANDOM(110, 220))"
       - name: PlannedExpense
         type: decimal(12,2)
+        generator:
+          type: formula
+          expression: "SELECT COALESCE(SUM(Amount), 0) FROM Actual_Project_Expense WHERE DeliverableID IN (SELECT DeliverableID FROM Deliverable WHERE ProjectID = @ProjectID)"
       - name: EstimatedBudget
         type: decimal(12,2)
+        generator:
+          type: formula
+          expression: "SELECT COALESCE(SUM(dtpm.PlannedHours * pbr.BillingRate), 0) FROM Deliverable_Title_Plan_Mapping dtpm JOIN Project_Billing_Rate pbr ON dtpm.TitleID = pbr.TitleID AND pbr.ProjectID = @ProjectID WHERE dtpm.DeliverableID IN (SELECT DeliverableID FROM Deliverable WHERE ProjectID = @ProjectID)"
       - name: PlannedHours
         type: decimal(10,2)
+        generator:
+          type: formula
+          expression: "SELECT COALESCE(SUM(PlannedHours), 0) FROM Deliverable_Title_Plan_Mapping WHERE DeliverableID IN (SELECT DeliverableID FROM Deliverable WHERE ProjectID = @ProjectID)"
       - name: ProjectStatus
         type: string
       - name: created_at
@@ -209,7 +224,7 @@ entities:
         type: fk
         generator:
           type: foreign_key
-          subtype: many_to_one
+          subtype: one_to_one
         ref: Title.TitleID
       - name: BillingRate
         type: decimal(10,2)
@@ -236,16 +251,34 @@ entities:
             Implementation, 0.2, Coding and Unit Test, 0.2, System Test)
       - name: PlannedStartDate
         type: date
+        generator:
+          type: formula
+          expression: "SELECT PlannedStartDate FROM Project_Plan WHERE ProjectID = @ProjectID"
       - name: PlannedEndDate
         type: date
+        generator:
+          type: formula
+          expression: "SELECT PlannedEndDate FROM Project_Plan WHERE ProjectID = @ProjectID"
       - name: ActualStartDate
         type: date
+        generator:
+          type: formula
+          expression: "SELECT MIN(end_datetime) FROM sim_event_processing WHERE entity_id = @DeliverableID AND entity_table = 'Deliverable'"
       - name: ActualEndDate
         type: date
+        generator:
+          type: formula
+          expression: "SELECT MAX(end_datetime) FROM sim_event_processing WHERE entity_id = @DeliverableID AND entity_table = 'Deliverable'"
       - name: DeliverableFixedPrice
         type: decimal(12,2)
+        generator:
+          type: formula
+          expression: "SELECT Fixed_Price_Amount / 5.0 FROM Project_Plan WHERE ProjectID = @ProjectID"
       - name: PlannedExpense
         type: decimal(12,2)
+        generator:
+          type: formula
+          expression: "SELECT COALESCE(SUM(Amount), 0) FROM Actual_Project_Expense WHERE DeliverableID = @DeliverableID"
       - name: created_at
         type: datetime
   - name: Deliverable_Title_Plan_Mapping
@@ -265,7 +298,7 @@ entities:
         ref: Title.TitleID
         generator:
           type: foreign_key
-          subtype: many_to_one
+          subtype: one_to_one
       - name: PlannedHours
         type: decimal(10,2)
         generator:

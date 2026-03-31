@@ -109,6 +109,10 @@ def generate_attribute_value(attr_config: Dict[str, Any], row_index: int) -> Any
         # or simulator's entity creation methods
         return None
 
+    # Formula generator - handled by post-simulation formula resolution
+    elif generator_type == 'formula':
+        return None
+
     # Unknown generator type
     else:
         logger.warning(f"Unknown generator type '{generator_type}' for {attr_name}")

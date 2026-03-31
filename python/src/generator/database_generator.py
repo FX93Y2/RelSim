@@ -206,11 +206,25 @@ class DatabaseGenerator:
     def has_pending_formulas(self) -> bool:
         """
         Check if there are any formula attributes waiting for post-simulation resolution.
-        
+        If populate_tables() was never called (e.g. API split workflow), scan config directly.
+
         Returns:
             True if there are pending formulas, False otherwise
         """
+        if not self.data_populator.has_pending_formulas():
+            self._scan_formula_attributes()
         return self.data_populator.has_pending_formulas()
+
+    def _scan_formula_attributes(self):
+        """Scan db config for formula attributes without populating tables."""
+        for entity in self.config.entities:
+            formula_attrs = [
+                attr for attr in entity.attributes
+                if attr.generator and getattr(attr.generator, "type", None) == "formula"
+            ]
+            if formula_attrs:
+                self.data_populator.pending_formulas[entity.name] = formula_attrs
+                logger.info(f"Scanned {len(formula_attrs)} formula attributes in table {entity.name}")
     
     def resolve_formulas(self, db_path: str) -> bool:
         """

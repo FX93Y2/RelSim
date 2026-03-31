@@ -39,7 +39,10 @@ class FormulaEvaluator:
             
             # Evaluate based on expression type
             result = None
-            if parsed.expression_type == 'sql' or substituted_expr.strip().upper().startswith("SELECT"):
+            # Check for date arithmetic first (e.g., '@created_at + DAYS(RANDOM(20,40))')
+            if ' - DAYS(' in substituted_expr or ' + DAYS(' in substituted_expr:
+                result = self._evaluate_date_arithmetic_expression(substituted_expr)
+            elif parsed.expression_type == 'sql' or substituted_expr.strip().upper().startswith("SELECT"):
                 result = self._evaluate_sql_expression(substituted_expr, parsed)
             elif parsed.expression_type == 'table_reference':
                 result = self._evaluate_table_reference(substituted_expr, parsed)
@@ -156,11 +159,19 @@ class FormulaEvaluator:
                 logger.debug(f"FORMULA EVAL: After RANDOM processing: '{processed_days}'")
                 days = int(processed_days)
                 
-                # Execute the SQL part first
+                # Execute the SQL part first (or use as literal date)
                 sql_part = self._fix_sqlite_syntax(sql_part)
                 logger.debug(f"FORMULA EVAL: Executing SQL part: '{sql_part}'")
-                base_result = self.session.execute(text(sql_part)).scalar()
-                logger.debug(f"FORMULA EVAL: SQL result: {base_result}")
+
+                # Check if sql_part is a quoted string literal (date value from context)
+                stripped = sql_part.strip()
+                if (stripped.startswith("'") and stripped.endswith("'")) or \
+                   (stripped.startswith('"') and stripped.endswith('"')):
+                    base_result = stripped[1:-1]  # Remove quotes
+                    logger.debug(f"FORMULA EVAL: Using literal date: {base_result}")
+                else:
+                    base_result = self.session.execute(text(sql_part)).scalar()
+                    logger.debug(f"FORMULA EVAL: SQL result: {base_result}")
                 
                 if base_result:
                     # Convert to datetime
