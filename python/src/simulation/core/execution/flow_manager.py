@@ -55,9 +55,10 @@ class FlowManager:
             elif len(entry_points) > 1:
                 logger.warning(f"Flow {flow.flow_id} has multiple entry points: {entry_points}. All will be started.")
             
-            # Start each entry point module
-            for step in flow.steps:
-                if step.step_type == 'create' and step.create_config:
+            # Start each entry point module — only true entry points (with interarrival_time)
+            for step_id in entry_points:
+                step = self._find_step_by_id(step_id, flow)
+                if step and step.step_type == 'create' and step.create_config:
                     logger.debug(f"Starting Create module: {step.step_id} (table: {step.create_config.entity_table})")
                     
                     # Start the Create module as a SimPy process
@@ -72,7 +73,11 @@ class FlowManager:
     
     def _find_flow_entry_points(self, flow: 'EventFlow') -> List[str]:
         """
-        Find steps that can start entity processing (currently create/batch).
+        Find steps that can start entity processing.
+        
+        Only Create steps with interarrival_time are true entry points (sources).
+        Create steps without interarrival_time are triggered sub-flow creates
+        that should only fire when reached via next_steps routing.
         
         Args:
             flow: Event flow to analyze.
@@ -81,10 +86,16 @@ class FlowManager:
             List of step IDs that are entry points.
         """
         entry_points = []
-        entry_point_types = ['create', 'batch']  # Extensible for future module types
         
         for step in flow.steps:
-            if step.step_type in entry_point_types:
+            if step.step_type == 'create' and step.create_config:
+                # Only treat as entry point if it has interarrival_time (source mode)
+                if step.create_config.interarrival_time:
+                    entry_points.append(step.step_id)
+                    logger.debug(f"Identified entry point: {step.step_id} (type: {step.step_type}, has interarrival_time)")
+                else:
+                    logger.debug(f"Skipping triggered create: {step.step_id} (no interarrival_time, activated by parent flow)")
+            elif step.step_type == 'batch':
                 entry_points.append(step.step_id)
                 logger.debug(f"Identified entry point: {step.step_id} (type: {step.step_type})")
         

@@ -9,9 +9,6 @@ import logging
 import random
 from datetime import timedelta
 from typing import Any, Generator, Optional
-from sqlalchemy import create_engine, insert
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import NullPool
 
 from ..base import StepProcessor
 from ..utils import extract_distribution_config, extract_distribution_config_with_time_unit
@@ -85,22 +82,13 @@ class EventStepProcessor(StepProcessor):
         
         event_config = step.event_config
         event_flow_label = event_flow or getattr(flow, 'event_flow', None) or getattr(flow, 'flow_id', None)
-        
-        # Create a process-specific engine for isolation
-        process_engine = create_engine(
-            f"sqlite:///{self.resource_manager.db_path}?journal_mode=WAL",
-            poolclass=NullPool,
-            connect_args={"check_same_thread": False}
-        )
-        
-        session = None
+
         try:
-            session = Session(process_engine)
             # Create event in database (or synthetic placeholder when event table is absent)
             event_id = self._create_event_for_step(
-                session, entity_id, step, entity_table, event_flow_label
+                None, entity_id, step, entity_table, event_flow_label
             )
-            
+
             if event_id is None:
                 self.logger.warning(
                     f"Falling back to synthetic event id for step {step.step_id} (entity {entity_id})"
@@ -109,8 +97,6 @@ class EventStepProcessor(StepProcessor):
 
             # Retrieve entity attributes for queue priority calculation (if needed)
             entity_attributes = {}
-            session.close()
-            session = None
 
             # Determine if this step is part of a resource group
             current_group_id = step.group_id
@@ -233,7 +219,7 @@ class EventStepProcessor(StepProcessor):
             
             # Record event processing
             self._record_event_processing(
-                process_engine, event_flow_label, event_id, entity_id,
+                self.engine, event_flow_label, event_id, entity_id,
                 start_time, end_time, duration_minutes, active_event_tracker,
                 entity_table=entity_table
             )
@@ -272,10 +258,6 @@ class EventStepProcessor(StepProcessor):
         except Exception as e:
             self.logger.error(f"Error processing event step {step.step_id}: {str(e)}", exc_info=True)
             return None
-        finally:
-            if session:
-                session.close()
-            process_engine.dispose()
         
         # Determine next step
         next_step_id = step.next_steps[0] if step.next_steps else None

@@ -183,7 +183,8 @@ class QueueManager:
             return  # Database logging not enabled
 
         try:
-            simulation_datetime = self.start_date + timedelta(minutes=self.env.now)
+            # Date-only — time-of-day is a continuous-time artifact with no business meaning
+            simulation_datetime = (self.start_date + timedelta(minutes=self.env.now)).date()
 
             with self.engine.connect() as conn:
                 stmt = insert(self.queue_activity_table).values(
@@ -277,20 +278,20 @@ class QueueManager:
         stats['total_entries'] += 1
         stats['max_length'] = max(stats['max_length'], queue_length_after)
 
-        # Log to database
+        # Log to database — always record priority (0.0 for FIFO, actual value for priority queues)
         self._log_queue_activity(
             queue_name=queue_name,
             entity_id=entity_id,
             entity_table=entity_table,
             action='entry',
-            priority=entry.priority if queue_def.type in ['LowAttribute', 'HighAttribute'] else None,
+            priority=entry.priority,
             queue_length_before=queue_length_before,
             queue_length_after=queue_length_after
         )
 
         logger.debug(
             f"Entity {entity_id} entered queue '{queue_name}' "
-            f"(length: {queue_length_after}, priority: {entry.priority if queue_def.type in ['LowAttribute', 'HighAttribute'] else 'N/A'})"
+            f"(length: {queue_length_after}, priority: {entry.priority})"
         )
 
     def dequeue(self, queue_name: str) -> Optional[QueueEntry]:
@@ -342,13 +343,13 @@ class QueueManager:
             stats['max_wait_time'] = max(stats['max_wait_time'], wait_time)
             stats['wait_times'].append(wait_time)
 
-            # Log to database
+            # Log to database — always record priority (0.0 for FIFO, actual value for priority queues)
             self._log_queue_activity(
                 queue_name=queue_name,
                 entity_id=entry.entity_id,
                 entity_table=entry.entity_table,
                 action='exit',
-                priority=entry.priority if queue_def.type in ['LowAttribute', 'HighAttribute'] else None,
+                priority=entry.priority,
                 queue_length_before=queue_length_before,
                 queue_length_after=queue_length_after,
                 wait_time=wait_time

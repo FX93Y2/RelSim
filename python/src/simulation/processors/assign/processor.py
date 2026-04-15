@@ -155,13 +155,57 @@ class AssignStepProcessor(StepProcessor):
         # Update database columns with assigned attributes
         if db_attributes and self.entity_manager:
             try:
+                # Check if the entity table has the attributes — if not,
+                # resolve the parent entity and update that instead.
+                actual_table = entity_table
+                actual_entity_id = entity_id
+                
+                db_config = getattr(self.entity_manager, 'db_config', None)
+                if db_config:
+                    entity_cfg = next((e for e in db_config.entities if e.name == entity_table), None)
+                    if entity_cfg:
+                        entity_columns = {a.name for a in entity_cfg.attributes}
+                        missing_attrs = set(db_attributes.keys()) - entity_columns
+                        
+                        if missing_attrs:
+                            # Attribute not on current entity — look for a parent table
+                            # that has these attributes (via FK)
+                            for attr in entity_cfg.attributes:
+                                if attr.ref and (
+                                    (attr.generator and attr.generator.type == "foreign_key") or
+                                    attr.type in ('entity_id', 'fk')
+                                ):
+                                    ref_table = attr.ref.split('.')[0]
+                                    parent_cfg = next((e for e in db_config.entities if e.name == ref_table), None)
+                                    if parent_cfg:
+                                        parent_columns = {a.name for a in parent_cfg.attributes}
+                                        if missing_attrs.issubset(parent_columns):
+                                            # Read the parent FK value from the DB
+                                            from sqlalchemy import text
+                                            pk_col = next((a.name for a in entity_cfg.attributes if a.type == 'pk'), None)
+                                            if pk_col:
+                                                with self.engine.connect() as conn:
+                                                    result = conn.execute(
+                                                        text(f"SELECT [{attr.name}] FROM [{entity_table}] WHERE [{pk_col}] = :eid"),
+                                                        {"eid": entity_id}
+                                                    )
+                                                    row = result.fetchone()
+                                                    if row and row[0] is not None:
+                                                        actual_table = ref_table
+                                                        actual_entity_id = row[0]
+                                                        self.logger.debug(
+                                                            f"Cross-entity assign: updating {ref_table}[{actual_entity_id}] "
+                                                            f"instead of {entity_table}[{entity_id}] for attrs {missing_attrs}"
+                                                        )
+                                                        break
+                
                 success = self.entity_manager.update_entity_attributes_batch(
-                    entity_id, entity_table, db_attributes
+                    actual_entity_id, actual_table, db_attributes
                 )
                 if success:
-                    self.logger.debug(f"Persisted {len(db_attributes)} attributes to database for entity {entity_id}")
+                    self.logger.debug(f"Persisted {len(db_attributes)} attributes to database for entity {actual_entity_id} in {actual_table}")
                 else:
-                    self.logger.warning(f"Failed to persist attributes to database for entity {entity_id}")
+                    self.logger.warning(f"Failed to persist attributes to database for entity {actual_entity_id} in {actual_table}")
             except Exception as e:
                 self.logger.error(f"Error persisting attributes to database for entity {entity_id}: {str(e)}", exc_info=True)
         

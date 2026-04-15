@@ -406,22 +406,26 @@ async function exportTableToCSV(db, tableName, exportDir) {
     return { table: tableName, path: tableFilePath, rows: 0 };
   }
   
-  // Create CSV content
   const headers = Object.keys(rows[0]);
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => headers.map(header => {
+  
+  // Write header
+  fs.writeFileSync(tableFilePath, headers.join(',') + '\n');
+  
+  // Write rows in chunks to prevent V8 out-of-memory errors
+  const CHUNK_SIZE = 1000;
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + CHUNK_SIZE);
+    const chunkContent = chunk.map(row => headers.map(header => {
       const value = row[header];
       if (value === null || value === undefined) return '';
       const str = String(value);
       return str.includes(',') || str.includes('"') || str.includes('\n')
         ? `"${str.replace(/"/g, '""')}"`
         : str;
-    }).join(','))
-  ].join('\n');
-  
-  // Write CSV file
-  fs.writeFileSync(tableFilePath, csvContent);
+    }).join(',')).join('\n') + '\n';
+    
+    fs.appendFileSync(tableFilePath, chunkContent);
+  }
   
   console.log(`Exported ${rows.length} rows from table ${tableName} to ${tableFilePath}`);
   

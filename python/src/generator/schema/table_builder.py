@@ -56,6 +56,13 @@ class TableBuilder:
             '__table_args__': {'extend_existing': True}
         }
         
+        # Check if entity has a PK defined
+        has_pk = any(attr.is_primary_key for attr in entity.attributes)
+        
+        # Bridge tables without a PK need a synthetic autoincrement rowid for SQLAlchemy
+        if not has_pk and entity.type == 'bridge':
+            attrs['_rowid'] = Column(Integer, primary_key=True)
+        
         # Add columns based on attributes
         for attr in entity.attributes:
             column_type = self._get_column_type(attr.type)

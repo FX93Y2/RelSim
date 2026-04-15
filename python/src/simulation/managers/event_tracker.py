@@ -194,8 +194,9 @@ class EventTracker:
             entity_table: Name of the entity table
         """
         duration = end_time - start_time
-        start_datetime = self.start_date + timedelta(minutes=start_time)
-        end_datetime = self.start_date + timedelta(minutes=end_time)
+        # Date-only — time-of-day is a continuous-time artifact with no business meaning
+        start_datetime = (self.start_date + timedelta(minutes=start_time)).date()
+        end_datetime   = (self.start_date + timedelta(minutes=end_time)).date()
         
         with self.engine.connect() as conn:
             stmt = insert(self.event_processing).values(
@@ -219,8 +220,9 @@ class EventTracker:
                                   extra_attributes: Optional[Dict[str, Any]] = None):
         """Record the allocation of a resource to an event."""
         try:
-            allocation_datetime = self.start_date + timedelta(minutes=allocation_time)
-            release_datetime = self.start_date + timedelta(minutes=release_time) if release_time else None
+            # Date-only — time-of-day is a continuous-time artifact with no business meaning
+            allocation_datetime = (self.start_date + timedelta(minutes=allocation_time)).date()
+            release_datetime    = (self.start_date + timedelta(minutes=release_time)).date() if release_time else None
 
             with self.engine.connect() as conn:
                 stmt = insert(self.resource_allocations).values(
@@ -273,10 +275,15 @@ class EventTracker:
                         conn.commit()
                         return
 
-                    bridge_data = {
-                        'start_date': allocation_datetime,
-                        'end_date': release_datetime
-                    }
+                    bridge_data = {}
+                    bridge_col_names = [c.name for c in target_bridge.columns]
+                    
+                    # Only include start_date/end_date if columns exist in bridge table.
+                    # allocation_datetime/release_datetime are already date objects (set above).
+                    if 'start_date' in bridge_col_names:
+                        bridge_data['start_date'] = allocation_datetime
+                    if 'end_date' in bridge_col_names:
+                        bridge_data['end_date'] = release_datetime
                     
                     # Add resource FK if present
                     if resource_fk:

@@ -44,3 +44,11 @@ python/db_simulator_api.spec
 
 # Data viz
 python/scripts/generate_validation_viz.py
+
+# Tests and docs
+python/tests/
+docs/
+doc/
+
+# Simulation output — run artifacts, samples, generated reports
+output/

@@ -192,11 +192,18 @@ def find_table_by_type(db_config: DatabaseConfig, table_type: str) -> Optional[s
 class SimulationConfig:
     base_time_unit: str
     terminating_conditions: TerminatingConditions
-    
+
     # Other fields
     start_date: Optional[datetime] = None
     random_seed: Optional[int] = None
     event_simulation: Optional[EventSimulation] = None
+    # Snapshot settings
+    # snapshot_enabled: set False to skip all snapshot folder + DB-row generation
+    # snapshot_interval_days: gap between snapshots (30=monthly, 90=quarterly, 180=biannual, 365=annual)
+    # snapshot_alignment: "fixed" (exact N days) or "month_end" (snap to month-end)
+    snapshot_enabled: bool = True
+    snapshot_interval_days: int = 30
+    snapshot_alignment: str = "fixed"
     
     def __post_init__(self):
         """Validate configuration after initialization."""
@@ -467,7 +474,10 @@ def parse_sim_config(file_path: Union[str, Path], db_config: Optional[DatabaseCo
         terminating_conditions=terminating_conditions,
         start_date=start_date,
         random_seed=sim_dict.get('random_seed'),
-        event_simulation=event_simulation
+        event_simulation=event_simulation,
+        snapshot_enabled=bool(sim_dict.get('snapshot_enabled', True)),
+        snapshot_interval_days=int(sim_dict.get('snapshot_interval_days', 30)),
+        snapshot_alignment=str(sim_dict.get('snapshot_alignment', 'fixed'))
     )
 
 def parse_sim_config_from_string(config_content: str, db_config: Optional[DatabaseConfig] = None) -> SimulationConfig:
@@ -710,5 +720,8 @@ def parse_sim_config_from_string(config_content: str, db_config: Optional[Databa
         terminating_conditions=terminating_conditions,
         start_date=start_date,
         random_seed=sim_dict.get('random_seed'),
-        event_simulation=event_simulation
+        event_simulation=event_simulation,
+        snapshot_enabled=bool(sim_dict.get('snapshot_enabled', True)),
+        snapshot_interval_days=int(sim_dict.get('snapshot_interval_days', 30)),
+        snapshot_alignment=str(sim_dict.get('snapshot_alignment', 'fixed'))
     )

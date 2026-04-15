@@ -343,8 +343,9 @@ class EntityManager:
                 if entity_config:
                     for attr in entity_config.attributes:
                         if attr.type in ['datetime', 'timestamp'] and attr.name not in row_data:
-                            # Calculate the current simulation datetime
-                            creation_datetime = self.config.start_date + timedelta(minutes=self.env.now)
+                            # Calculate the current simulation date (date only — time-of-day
+                            # is a continuous-time artifact with no business meaning)
+                            creation_datetime = (self.config.start_date + timedelta(minutes=self.env.now)).date()
                             row_data[attr.name] = creation_datetime
                             logger.debug(f"Added {attr.name}={creation_datetime} for entity in {entity_table}")
             except Exception as e:
